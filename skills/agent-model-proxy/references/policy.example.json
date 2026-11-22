@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "version": "2026-11-10.1",
+  "preset": "standard",
+  "input": { "maxLength": 2000, "sendsPerMinute": 8 },
+  "tools": {
+    "deny": ["delete_*"],
+    "maxPerTurn": 3
+  },
+  "model": { "maxSteps": 6, "maxTokens": 8000 },
+  "conversation": { "maxGenerations": 80, "maxOutputTokens": 60000 },
+  "output": { "maxLength": 6000 },
+  "lockdown": null
+}

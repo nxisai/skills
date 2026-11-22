@@ -1,0 +1,118 @@
+# hosts/lambda/template.yaml — the Booking Agent on AWS: one function behind a
+# Function URL, one DynamoDB table, read access to four SSM parameters.
+#
+# Status: DRAFT. The quote agent's template, deployed to LocalStack 4.2.1; this
+# booking version has not been deployed anywhere, LocalStack included.
+# Run `sam validate --lint` and `sam build`, then deploy only when the user says
+# so — it creates billable resources in their account.
+#
+# Not in here, on purpose:
+# - The SecureString parameters. CloudFormation cannot create SecureStrings; the
+#   user creates them once (see ../lambda.md, "Secrets").
+# - The CloudFront routing. The site's existing distribution gets one origin and
+#   two behaviors (../lambda.md, "Same origin"); this stack only outputs the URL.
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Booking Agent (booking-agent skill) — A2A endpoint on a Lambda Function URL
+
+Parameters:
+  PublicOrigin:
+    Type: String
+    Description: The site's public origin, scheme included (https://example.com). The Agent Card points here.
+  SecretsPrefix:
+    Type: String
+    Default: /booking-agent/prod/
+    AllowedPattern: '^/.*/$'
+    Description: SSM path holding anthropic-api-key, a2a-relay-token, webhook-signing-secret and (optional) availability-token (SecureString).
+  BookingModel:
+    Type: String
+    Default: claude-sonnet-5-5
+  BookingSinkUrl:
+    Type: String
+    Description: Where the site's booking form posts, fixed server-side (https://example.com/api/book).
+  BookingAvailabilityUrl:
+    Type: String
+    Description: The site's free-slot endpoint, fixed server-side (https://example.com/api/slots).
+  CardWellKnown:
+    Type: String
+    Default: 'true'
+    AllowedValues: ['true', 'false']
+    Description: "'false' when another agent already serves /.well-known/agent-card.json."
+
+Resources:
+  BookingTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - { AttributeName: pk, AttributeType: S }
+      KeySchema:
+        - { AttributeName: pk, KeyType: HASH }
+      # task#, progress# (7 days) and sent# (30 days) items expire on their own.
+      TimeToLiveSpecification: { AttributeName: ttl, Enabled: true }
+      SSESpecification: { SSEEnabled: true }
+
+  BookingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: handler.handler
+      Runtime: nodejs22.x
+      Architectures: [arm64]
+      MemorySize: 512
+      # A turn: one model call (15 s cap, one retry), a calendar read (10 s cap) and, on a yes, a re-check and the sink (10 s each).
+      # Buffered, so CloudFront waits for the whole turn: set its origin read timeout to 60 s.
+      Timeout: 45
+      # Optional spend cap. Leave out on a new account whose concurrency quota is 10.
+      # ReservedConcurrentExecutions: 10
+      FunctionUrlConfig:
+        # The relay's bearer token is the gate, checked in the handler (constant time).
+        # AWS_IAM + CloudFront OAC would take the Authorization header for SigV4.
+        AuthType: NONE
+        # One turn ends at input-required or completed: the whole SSE body is sent at once.
+        InvokeMode: BUFFERED
+      Environment:
+        Variables:
+          PUBLIC_ORIGIN: !Ref PublicOrigin
+          BOOKING_TABLE: !Ref BookingTable
+          BOOKING_SECRETS_PREFIX: !Ref SecretsPrefix
+          BOOKING_MODEL: !Ref BookingModel
+          BOOKING_SINK_URL: !Ref BookingSinkUrl
+          BOOKING_AVAILABILITY_URL: !Ref BookingAvailabilityUrl
+          BOOKING_CARD_WELL_KNOWN: !Ref CardWellKnown
+      Policies:
+        # Least privilege: three item operations on this table, and reading the four parameters.
+        - Statement:
+            - Effect: Allow
+              Action: [dynamodb:GetItem, dynamodb:PutItem, dynamodb:DeleteItem]
+              Resource: !GetAtt BookingTable.Arn
+            - Effect: Allow
+              Action: ssm:GetParameters
+              Resource:
+                - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${SecretsPrefix}anthropic-api-key
+                - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${SecretsPrefix}a2a-relay-token
+                - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${SecretsPrefix}webhook-signing-secret
+                - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${SecretsPrefix}availability-token
+            # SecureStrings under the AWS managed key aws/ssm need no KMS grant here.
+            # Under a customer managed key, add kms:Decrypt on that key's ARN.
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        EntryPoints: [handler.ts]
+        Target: node22
+        Format: cjs
+        Sourcemap: true
+        Minify: false
+
+  BookingFunctionLogs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${BookingFunction}
+      RetentionInDays: 14
+
+Outputs:
+  FunctionUrl:
+    Description: The CloudFront origin for /a2a/booking* and /.well-known/agent-card.json (or the relay target's endpoint, own-origin)
+    Value: !GetAtt BookingFunctionUrl.FunctionUrl
+  TableName:
+    Value: !Ref BookingTable

@@ -1,0 +1,55 @@
+# wrangler.toml — the Support Agent Worker (hosts/cloudflare/worker.ts).
+#
+# Secrets are NOT here. Put each with `wrangler secret put <NAME>`, value on stdin:
+#   A2A_RELAY_TOKEN          the same value as the relay's target credential
+#   ANTHROPIC_API_KEY        the owner's model key
+#   SUPPORT_GAP_KEY          the site-scoped gap key, piped from `nxis keys create … --json`
+#   SUPPORT_TURN_REF_SECRET  question keys and turn references (openssl rand -hex 32); without it, no gap reports
+# Locally, `wrangler dev` reads them from .dev.vars (gitignored; see .dev.vars.example).
+
+name = "support-agent"
+main = "src/support-worker.ts"
+compatibility_date = "2026-10-01"
+# @a2a-js/sdk uses Buffer; support-core's turnRef uses node:crypto's createHmac;
+# example-site.ts imports node:fs/promises and node:path.
+compatibility_flags = ["nodejs_compat"]
+
+# Same origin as the site: a route on the site's zone, for the endpoint, the card and health.
+# Leave out /.well-known/... if another agent on the site claims it.
+routes = [
+  { pattern = "example.com/a2a/support*", zone_name = "example.com" },
+  { pattern = "example.com/.well-known/agent-card.json", zone_name = "example.com" },
+]
+# Or, when this Worker is the site (Workers static assets), drop `routes` and add:
+# [assets]
+# directory = "./dist"
+# binding = "ASSETS"
+# run_worker_first = ["/a2a/support*", "/.well-known/agent-card.json"]
+
+# One Durable Object per task: the SDK's task and support-core's context.
+[[durable_objects.bindings]]
+name = "SUPPORT_TASKS"
+class_name = "SupportTask"
+
+# SQLite-backed: the synchronous ctx.storage.kv API, and the Free plan.
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["SupportTask"]
+
+# Reported questions' wording and turns, under their keys and refs. Create it with
+# `wrangler kv namespace create SUPPORT_TURNS` and paste the id here. Without the binding there is
+# nowhere to keep them, so no gap reports are sent.
+[[kv_namespaces]]
+binding = "SUPPORT_TURNS"
+id = "<the id `wrangler kv namespace create` printed>"
+
+[vars]
+# EXAMPLE: the site's MCP server, fixed here, never taken from a request.
+SUPPORT_MCP_ENDPOINT = "https://example.com/mcp"
+# The provisioning MCP server the gap key reports to (SKILL.md step 3).
+SUPPORT_PROVISIONING_ENDPOINT = ""
+# How long reported questions and turns are kept, in days: what the owner said.
+SUPPORT_TURN_RETENTION_DAYS = "30"
+SUPPORT_MODEL = "claude-sonnet-5-5"
+SUPPORT_REWRITE_MODEL = "claude-haiku-5-5"
+# SUPPORT_CARD_WELL_KNOWN = "false"   # when another agent serves /.well-known/agent-card.json

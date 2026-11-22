@@ -1,0 +1,10 @@
+# What `gcloud run deploy --source .` uploads to Cloud Storage before the
+# build. The Dockerfile's .dockerignore is applied later, inside the build,
+# so it doesn't stop the upload: secrets are kept out here too.
+.gcloudignore
+.git
+.gitignore
+.env*
+.support
+node_modules
+dist

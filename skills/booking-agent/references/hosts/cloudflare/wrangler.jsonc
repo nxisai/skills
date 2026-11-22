@@ -1,0 +1,38 @@
+// wrangler.jsonc — the Booking Agent Worker (hosts/cloudflare/worker.ts).
+// Secrets are NOT here: `wrangler secret put ANTHROPIC_API_KEY`, `A2A_RELAY_TOKEN`
+// and `NXIS_WEBHOOK_SIGNING_SECRET` (and `BOOKING_AVAILABILITY_TOKEN` if the
+// calendar wants one); locally, .dev.vars (see .dev.vars.example).
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "booking-agent",
+  "main": "src/booking-worker.ts",
+  "compatibility_date": "2026-10-01",
+  // @a2a-js/sdk uses Buffer; example-site.ts signs with node:crypto.
+  "compatibility_flags": ["nodejs_compat"],
+
+  // One Durable Object per task: the SDK's task, agent-core's progress, the submit claim per attempt.
+  "durable_objects": {
+    "bindings": [{ "name": "BOOKING_TASKS", "class_name": "BookingTask" }]
+  },
+  // SQLite-backed: the synchronous ctx.storage.kv API the claim relies on.
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["BookingTask"] }],
+
+  "vars": {
+    "BOOKING_MODEL": "claude-sonnet-5-5",
+    // EXAMPLE: where the site's booking form posts. Fixed here, never taken from a request.
+    "BOOKING_SINK_URL": "https://example.com/api/book",
+    // EXAMPLE: the site's free-slot endpoint. Unset: the agent is offered as unavailable.
+    "BOOKING_AVAILABILITY_URL": "https://example.com/api/slots"
+    // "BOOKING_CARD_WELL_KNOWN": "false"   // when another agent serves /.well-known/agent-card.json
+  },
+
+  // Same origin as the site: a route on the site's zone, for the endpoint and both cards.
+  // Leave out /.well-known/... if another agent on the site claims it.
+  "routes": [
+    { "pattern": "example.com/a2a/booking*", "zone_name": "example.com" },
+    { "pattern": "example.com/.well-known/agent-card.json", "zone_name": "example.com" }
+  ]
+  // Or, when this Worker is the site (Workers static assets), drop "routes" and add:
+  // "assets": { "directory": "./dist", "binding": "ASSETS",
+  //             "run_worker_first": ["/a2a/booking*", "/.well-known/agent-card.json"] }
+}

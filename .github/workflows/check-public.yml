@@ -1,0 +1,25 @@
+# Fails when the repository names what isn't public: a private repository, an issue or pull
+# request reference, an internal host or name, or an email address (scripts/check-public.mjs).
+name: Public content
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+      - name: The check's own tests
+        run: node --test scripts/check-public.test.mjs
+      - name: Nothing internal in the tree
+        run: node scripts/check-public.mjs .

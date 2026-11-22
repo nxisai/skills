@@ -1,0 +1,46 @@
+# Two replicas of the Quote Agent, and the Redis their tasks, progress and
+# submit claim live in. Added to compose.yaml:
+#
+#   docker compose -f compose.yaml -f compose.replicas.yaml up -d --build
+#
+# (or COMPOSE_FILE=compose.yaml:compose.replicas.yaml in compose's own .env).
+#
+# REDIS_URL is set here, for both replicas at once, rather than in
+# .env.local: a replica left on memory would keep its own claim, and the two
+# could each submit the same request.
+
+services:
+  quote-agent:
+    environment:
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      redis:
+        # Without this the agent races Redis on a cold start, and exits.
+        condition: service_healthy
+
+  # The second replica: the same service on the next loopback port. The
+  # reverse proxy balances across 4120 and 4121.
+  quote-agent-2:
+    extends:
+      file: compose.yaml
+      service: quote-agent
+    ports: !override
+      - 127.0.0.1:4121:4120
+    environment:
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # No published port: only the agents talk to it, over the compose network.
+    # No persistence: a task lives for one conversation. A Redis restart fails
+    # those conversations over to the form; it never resends one.
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5

@@ -1,0 +1,14 @@
+{
+  "$comment": "An in-memory availability source for trying the agent: arrival windows per weekday in the business's zone, one crew, so a window booked for one service is gone for all. A real site reads its own calendar or booking system instead (see example-site.ts, httpAvailability).",
+  "timeZone": "America/Chicago",
+  "windowMinutes": 120,
+  "windows": {
+    "mon": ["08:00", "10:00", "13:00", "15:00"],
+    "tue": ["08:00", "10:00", "13:00", "15:00"],
+    "wed": ["08:00", "10:00", "13:00", "15:00"],
+    "thu": ["08:00", "10:00", "13:00", "15:00"],
+    "fri": ["08:00", "10:00", "13:00", "15:00"],
+    "sat": ["09:00", "11:00"]
+  },
+  "booked": []
+}

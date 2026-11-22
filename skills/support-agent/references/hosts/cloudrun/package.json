@@ -1,0 +1,22 @@
+{
+  "name": "support-agent",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The site's Support Agent on Cloud Run: an A2A agent behind the handoff relay that answers support questions from the site's own help content. Tasks, context and reported turns in Firestore.",
+  "scripts": {
+    "build": "esbuild server.ts --bundle --platform=node --format=esm --target=node22 --packages=external --outfile=dist/server.mjs",
+    "start": "node dist/server.mjs"
+  },
+  "dependencies": {
+    "@a2a-js/sdk": "^1.3.0",
+    "@anthropic-ai/sdk": "^1.6.0",
+    "@google-cloud/firestore": "^9.4.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

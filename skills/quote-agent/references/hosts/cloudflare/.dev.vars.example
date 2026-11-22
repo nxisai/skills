@@ -1,0 +1,7 @@
+# Copy to .dev.vars for `wrangler dev`, and fill in locally. .dev.vars is never committed.
+# In production these are Worker secrets: `wrangler secret put <NAME>`.
+ANTHROPIC_API_KEY=
+A2A_RELAY_TOKEN=
+NXIS_WEBHOOK_SIGNING_SECRET=
+# Locally, the sink is the dev server's own (overrides the var in wrangler.jsonc).
+QUOTE_SINK_URL=

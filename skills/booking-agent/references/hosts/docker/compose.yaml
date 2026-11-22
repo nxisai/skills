@@ -1,0 +1,26 @@
+# The Booking Agent: one replica, tasks and progress in memory.
+#
+#   docker compose up -d --build
+#   docker compose logs -f booking-agent
+#
+# For two replicas and the Redis they share, add compose.replicas.yaml:
+#
+#   docker compose -f compose.yaml -f compose.replicas.yaml up -d --build
+#
+# The site's reverse proxy routes the card paths and /a2a/booking here; the
+# relay calls /a2a/booking with the relay token. Nothing else reaches it.
+
+services:
+  booking-agent:
+    build: .
+    restart: unless-stopped
+    # Loopback only. The relay token is its one defense; on 0.0.0.0 the
+    # endpoint and /healthz would be published to the network.
+    ports:
+      - 127.0.0.1:4120:4120
+    # Secrets from a gitignored file at runtime — never `environment:`, which
+    # anyone who can read the repo can read and `docker compose config` prints.
+    env_file:
+      - ./.env.local
+    environment:
+      PORT: 4120

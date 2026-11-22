@@ -1,0 +1,30 @@
+{
+  "$comment": "The site's quote form, field by field: the page's form is rendered from it (or checked against it in a test), and the Quote Agent asks for the same fields and posts the same payload. Names are the form's input names; kinds are text | email | phone | choice | longtext. Options may be a list, or \"business.services\" to take each business's own services. Replace the example values with the site's.",
+  "hidden": [{ "name": "business", "from": "business.name" }],
+  "fields": [
+    { "name": "full_name", "label": "Full Name", "kind": "text", "required": true },
+    { "name": "email", "label": "Email Address", "kind": "email", "required": true },
+    { "name": "phone", "label": "Phone Number", "kind": "phone", "required": false },
+    {
+      "name": "service",
+      "label": "Service Needed",
+      "kind": "choice",
+      "required": false,
+      "options": "business.services",
+      "other": { "value": "other", "label": "Other" }
+    },
+    {
+      "name": "timeline",
+      "label": "Timeline",
+      "kind": "choice",
+      "required": false,
+      "options": [
+        { "value": "emergency", "label": "Emergency — right now" },
+        { "value": "this-week", "label": "This week" },
+        { "value": "this-month", "label": "This month" },
+        { "value": "flexible", "label": "Flexible" }
+      ]
+    },
+    { "name": "project_description", "label": "Project Description", "kind": "longtext", "required": true }
+  ]
+}

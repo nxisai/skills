@@ -1,0 +1,5 @@
+# Copy to .dev.vars (gitignored) for `wrangler dev`. Names only here — never values.
+A2A_RELAY_TOKEN=
+ANTHROPIC_API_KEY=
+SUPPORT_GAP_KEY=
+SUPPORT_TURN_REF_SECRET=

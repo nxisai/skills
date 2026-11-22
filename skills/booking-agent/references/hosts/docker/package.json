@@ -1,0 +1,22 @@
+{
+  "name": "booking-agent",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The site's Booking Agent: an A2A agent behind the handoff relay that takes a booking in conversation from the site's free slots and books it where the booking form does.",
+  "scripts": {
+    "build": "esbuild server.ts --bundle --platform=node --format=esm --target=node22 --packages=external --outfile=dist/server.mjs",
+    "start": "node dist/server.mjs"
+  },
+  "dependencies": {
+    "@a2a-js/sdk": "^1.2.1",
+    "@anthropic-ai/sdk": "^1.3.0",
+    "redis": "^4.7.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

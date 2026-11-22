@@ -1,0 +1,4 @@
+# Secrets never enter the build context, so no layer can carry them.
+.env*
+node_modules
+dist

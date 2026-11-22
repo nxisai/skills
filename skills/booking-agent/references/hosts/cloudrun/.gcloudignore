@@ -1,0 +1,9 @@
+# `gcloud run deploy --source .` uploads this directory to a Cloud Storage
+# bucket for Cloud Build. Without this file gcloud derives one from .gitignore;
+# with it, these never leave the machine. The Dockerfile's .dockerignore is
+# applied later, inside the build, and does not stop the upload.
+.env*
+node_modules
+dist
+.git
+.gcloudignore

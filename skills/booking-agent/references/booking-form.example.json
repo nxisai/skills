@@ -1,0 +1,12 @@
+{
+  "$comment": "The site's booking form, as the Booking Agent posts it. `posted` names the keys the form posts the service, location and slot under; `fields` are the contact fields it asks for, in order. Kinds are text | email | phone | choice | longtext; `pattern` and `ask` check a value and say what to ask when it fails. Ask only what the booking needs. Replace the example values with the site's.",
+  "posted": { "service": "service", "location": "location", "slot": "slot_id", "start": "start", "end": "end", "timeZone": "time_zone" },
+  "fields": [
+    { "name": "full_name", "label": "Name", "kind": "text", "required": true },
+    { "name": "phone", "label": "Phone", "kind": "phone", "required": true },
+    { "name": "email", "label": "Email", "kind": "email", "required": false },
+    { "name": "street", "label": "Street address", "kind": "text", "required": true, "ask": "What's the street address for the visit?" },
+    { "name": "zip", "label": "ZIP code", "kind": "text", "required": true, "pattern": "^\\d{5}$", "ask": "And the five-digit ZIP code?" },
+    { "name": "notes", "label": "What's happening", "kind": "longtext", "required": false }
+  ]
+}

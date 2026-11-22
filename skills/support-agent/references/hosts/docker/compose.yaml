@@ -1,0 +1,33 @@
+# The Support Agent: one replica, tasks and context in memory, reported turns
+# on the `support-turns` volume.
+#
+#   docker compose up -d --build
+#   docker compose logs -f support-agent
+#
+# The site's reverse proxy routes the card paths and /a2a/support here; the
+# relay calls /a2a/support with the relay token. Nothing else reaches it.
+#
+# One replica only: `deploy.replicas` or `--scale` above 1 splits each
+# conversation's memory between processes. See docker.md.
+
+services:
+  support-agent:
+    build: .
+    restart: unless-stopped
+    # Loopback only. The relay token is its one defense.
+    ports:
+      - 127.0.0.1:4130:4130
+    # Secrets from a gitignored file at runtime — never `environment:`, which
+    # anyone who can read the repo can read and `docker compose config` prints.
+    env_file:
+      - ./.env.local
+    environment:
+      PORT: 4130
+      SUPPORT_SHUTDOWN_MS: 12000
+    # Longer than SUPPORT_SHUTDOWN_MS: docker sends SIGKILL when this runs out (default 10 s).
+    stop_grace_period: 15s
+    volumes:
+      - support-turns:/data
+
+volumes:
+  support-turns:

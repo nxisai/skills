@@ -1,0 +1,623 @@
+{
+  "_about": "Wrenfield Events (a fictional demonstration site): its FAQPage as nxis_query returns it, and the help query rows for two rewrites, from a site MCP server with the retrieval additions.",
+  "faq": {
+    "mainEntity": [
+      {
+        "name": "Are fees and taxes included in the price?",
+        "@id": "https://wrenfield.example/faq#question-92dcc04f",
+        "acceptedAnswer": {
+          "text": "Yes. Every price on this site is the full price for one person. Nothing is added at checkout."
+        }
+      },
+      {
+        "name": "How do I get my passes?",
+        "@id": "https://wrenfield.example/faq#question-fa3beed7",
+        "acceptedAnswer": {
+          "text": "Your passes are on your order page as soon as you check out, each with its own code. Show the code on your phone or on paper at the entrance. On this demonstration site nothing is emailed."
+        }
+      },
+      {
+        "name": "How many passes can I buy in one order?",
+        "@id": "https://wrenfield.example/faq#question-7b67ce3e",
+        "acceptedAnswer": {
+          "text": "Up to eight of most pass types in one order. Workshop seats and Two-Day Pass Plus Workshop are limited to four, Student and Early-Career Passes and Side Room Season Passes to two."
+        }
+      },
+      {
+        "name": "Do I need to give a name for every pass?",
+        "@id": "https://wrenfield.example/faq#question-25fcf0e6",
+        "acceptedAnswer": {
+          "text": "Yes. Each pass carries the name of the person using it, and we ask for an email address so we can tell them about changes. You can put your own details on every pass and change the names later by contacting the box office."
+        }
+      },
+      {
+        "name": "What is the difference between a Weekend Pass and a Weekend Plus Pass?",
+        "@id": "https://wrenfield.example/faq#question-947bddaa",
+        "acceptedAnswer": {
+          "text": "Both admit you to both days of Field Days. Weekend Plus adds a fast entry lane, a shaded lounge with seating beside the main stage, two drink tokens per day and private restrooms."
+        }
+      },
+      {
+        "name": "Who can buy a Student and Early-Career Pass?",
+        "@id": "https://wrenfield.example/faq#question-17e51c09",
+        "acceptedAnswer": {
+          "text": "Students, and anyone in their first two years of paid work. We ask at the door and take your word for it."
+        }
+      },
+      {
+        "name": "What does the Side Room Season Pass cover?",
+        "@id": "https://wrenfield.example/faq#question-b8a86ca5",
+        "acceptedAnswer": {
+          "text": "General admission for one named person at all nine Side Room nights in 2027, in any city, with entry 30 minutes before doors. It is not transferable."
+        }
+      },
+      {
+        "name": "Can I get a refund?",
+        "@id": "https://wrenfield.example/faq#question-453f202e",
+        "acceptedAnswer": {
+          "text": "Yes, in full, up to 14 days before the event starts. After that, passes are not refundable, but you can transfer them to someone else at no charge up to the day before the event."
+        }
+      },
+      {
+        "name": "Can I give my pass to someone else?",
+        "@id": "https://wrenfield.example/faq#question-c31763a0",
+        "acceptedAnswer": {
+          "text": "Yes, for every pass except the Side Room Season Pass. Contact the box office with your order number and the new name up to the day before the event."
+        }
+      },
+      {
+        "name": "What happens if an event is canceled or moved?",
+        "@id": "https://wrenfield.example/faq#question-842ccaa5",
+        "acceptedAnswer": {
+          "text": "If we cancel an event, every pass is refunded in full without you asking. If we move an event to a new date, your pass is valid for the new date and you can ask for a full refund instead at any time before it."
+        }
+      },
+      {
+        "name": "What happens if it rains?",
+        "@id": "https://wrenfield.example/faq#question-84372b8f",
+        "acceptedAnswer": {
+          "text": "Field Days goes ahead in rain. We pause the music for lightning and resume when it is safe. Events at Saltbox Courtyard move next door to Tidewright Hall."
+        }
+      },
+      {
+        "name": "What time should I arrive?",
+        "@id": "https://wrenfield.example/faq#question-0940f5c1",
+        "acceptedAnswer": {
+          "text": "Each event page lists the time doors open and the time the program starts. For Field Days, gates open at noon and the first act is at 1:00 PM."
+        }
+      },
+      {
+        "name": "Are children welcome?",
+        "@id": "https://wrenfield.example/faq#question-eec02c6c",
+        "acceptedAnswer": {
+          "text": "It depends on the event, and every event page states the age guidance. Field Days is for all ages: children under 6 are free, and ages 6 to 17 need a Youth Weekend Pass. Side Room nights are 18 and over. Open Signal is 18 and over."
+        }
+      },
+      {
+        "name": "Can I bring food and drink?",
+        "@id": "https://wrenfield.example/faq#question-77721065",
+        "acceptedAnswer": {
+          "text": "At Field Days you can bring sealed water bottles, empty refillable bottles and food for children or for medical needs. Otherwise, food and drink are sold on site. Indoor venues do not allow outside food or drink."
+        }
+      },
+      {
+        "name": "Is there seating?",
+        "@id": "https://wrenfield.example/faq#question-300810f5",
+        "acceptedAnswer": {
+          "text": "Night Table, Low Light, Open Signal and Bench Sessions are seated. Side Room nights are standing unless the event page says seated. At Field Days, bring a blanket or a low chair."
+        }
+      },
+      {
+        "name": "Are your venues accessible?",
+        "@id": "https://wrenfield.example/faq#question-2979063a",
+        "acceptedAnswer": {
+          "text": "Every venue has a step-free entrance and accessible restrooms, and each venue page lists exactly what is provided. If you need something that is not listed, write to access@wrenfield.example before you book or at any time after."
+        }
+      },
+      {
+        "name": "Can I bring a companion or personal assistant?",
+        "@id": "https://wrenfield.example/faq#question-15b4915c",
+        "acceptedAnswer": {
+          "text": "Yes. If you need a companion to attend, their pass is free. Book your own pass, then contact the access team with your order number."
+        }
+      },
+      {
+        "name": "Are talks and films captioned?",
+        "@id": "https://wrenfield.example/faq#question-4d549cf2",
+        "acceptedAnswer": {
+          "text": "Every Open Signal talk has live captioning in the room and on the stream. Every Low Light screening has open captions."
+        }
+      },
+      {
+        "name": "Are Open Signal talks recorded?",
+        "@id": "https://wrenfield.example/faq#question-770dacf4",
+        "acceptedAnswer": {
+          "text": "Yes. Every talk and panel is recorded, and every in-person and Livestream Pass includes the recordings for one year. Workshops are not recorded."
+        }
+      },
+      {
+        "name": "How does the Livestream Pass work?",
+        "@id": "https://wrenfield.example/faq#question-ac51c3d9",
+        "acceptedAnswer": {
+          "text": "On the two conference days, sign in at the watch page with your order number and email address. The stream is captioned and runs for the whole program except the workshop."
+        }
+      },
+      {
+        "name": "Can I get an invoice for my employer?",
+        "@id": "https://wrenfield.example/faq#question-5dffef42",
+        "acceptedAnswer": {
+          "text": "Yes. Your order page is a valid receipt, and the box office can issue an invoice with your company's details."
+        }
+      },
+      {
+        "name": "Can you cater for my diet?",
+        "@id": "https://wrenfield.example/faq#question-e148d4ba",
+        "acceptedAnswer": {
+          "text": "A vegetarian menu is available at every supper if you tell us when you book. Tell us about allergies at the same time. Our guest chefs work in shared kitchens, so we cannot guarantee an allergen-free meal."
+        }
+      },
+      {
+        "name": "Will I be seated with my group?",
+        "@id": "https://wrenfield.example/faq#question-8d53d9e6",
+        "acceptedAnswer": {
+          "text": "Yes. Seats booked in one order are placed together. If your group booked separately, give each other's order numbers to the box office."
+        }
+      },
+      {
+        "name": "Is Wrenfield a real company?",
+        "@id": "https://wrenfield.example/faq#question-62f121e2",
+        "acceptedAnswer": {
+          "text": "No. Wrenfield is a fictional company and this is a demonstration website made by NxisAI. The events, venues, performers, speakers and prices are invented, and none of the events will take place."
+        }
+      },
+      {
+        "name": "Will I be charged if I check out?",
+        "@id": "https://wrenfield.example/faq#question-4bc0e208",
+        "acceptedAnswer": {
+          "text": "No. Checkout runs in test mode. It never asks for a card number, takes no payment, and deletes your order and the details you typed after 24 hours."
+        }
+      }
+    ],
+    "breadcrumb": {
+      "@id": "https://wrenfield.example/faq#breadcrumblist"
+    },
+    "@type": "FAQPage",
+    "@context": "https://schema.org/",
+    "@id": "https://wrenfield.example/faq"
+  },
+  "help": {
+    "refund policy": [
+      {
+        "@type": "FAQPage",
+        "@id": "https://wrenfield.example/faq",
+        "nxis:score": 0.9237022399902344,
+        "nxis:passage": {
+          "path": "mainEntity[9]",
+          "id": "https://wrenfield.example/faq#question-842ccaa5",
+          "score": 0.9237022399902344
+        },
+        "nxis:signals": {
+          "vector_score": 0.9237022399902344,
+          "vector_rank": 1,
+          "keyword_score": 2.018181818181818,
+          "keyword_rank": 1,
+          "fused": 0.03278688524590164
+        }
+      },
+      {
+        "name": "Events",
+        "url": "https://wrenfield.example/events/",
+        "@type": "CollectionPage",
+        "@id": "https://wrenfield.example/events",
+        "nxis:score": 0.8460121154785156,
+        "nxis:signals": {
+          "vector_score": 0.8460121154785156,
+          "vector_rank": 2,
+          "fused": 0.016129032258064516
+        }
+      },
+      {
+        "url": "https://wrenfield.example/",
+        "@type": "WebSite",
+        "name": "Wrenfield",
+        "@id": "https://wrenfield.example/#website/wrenfield",
+        "nxis:score": 0.8422527313232422,
+        "nxis:signals": {
+          "vector_score": 0.8422527313232422,
+          "vector_rank": 3,
+          "fused": 0.015873015873015872
+        }
+      },
+      {
+        "@type": "ImageObject",
+        "@id": "https://wrenfield.example/art/bench-sessions-denver-2027-09-25.svg",
+        "nxis:score": 0.8387432098388672,
+        "nxis:signals": {
+          "vector_score": 0.8387432098388672,
+          "vector_rank": 4,
+          "fused": 0.015625
+        }
+      },
+      {
+        "@type": "ImageObject",
+        "@id": "https://wrenfield.example/art/night-table-denver-2027-07-22.svg",
+        "nxis:score": 0.8385696411132812,
+        "nxis:signals": {
+          "vector_score": 0.8385696411132812,
+          "vector_rank": 5,
+          "fused": 0.015384615384615385
+        }
+      },
+      {
+        "@type": "ImageObject",
+        "@id": "https://wrenfield.example/art/side-room-minneapolis-2027-03-26.svg",
+        "nxis:score": 0.8384513854980469,
+        "nxis:signals": {
+          "vector_score": 0.8384513854980469,
+          "vector_rank": 6,
+          "fused": 0.015151515151515152
+        }
+      },
+      {
+        "@type": "ImageObject",
+        "@id": "https://wrenfield.example/art/side-room-pittsburgh-2027-04-09.svg",
+        "nxis:score": 0.8383216857910156,
+        "nxis:signals": {
+          "vector_score": 0.8383216857910156,
+          "vector_rank": 7,
+          "fused": 0.014925373134328358
+        }
+      },
+      {
+        "@type": "ImageObject",
+        "@id": "https://wrenfield.example/art/side-room-minneapolis-2027-11-19.svg",
+        "nxis:score": 0.8382358551025391,
+        "nxis:signals": {
+          "vector_score": 0.8382358551025391,
+          "vector_rank": 8,
+          "fused": 0.014705882352941176
+        }
+      },
+      {
+        "@type": "ImageObject",
+        "@id": "https://wrenfield.example/art/low-light-minneapolis-2027-05-07.svg",
+        "nxis:score": 0.8381996154785156,
+        "nxis:signals": {
+          "vector_score": 0.8381996154785156,
+          "vector_rank": 9,
+          "fused": 0.014492753623188406
+        }
+      },
+      {
+        "@type": "ImageObject",
+        "@id": "https://wrenfield.example/art/side-room-denver-2027-08-06.svg",
+        "nxis:score": 0.8381900787353516,
+        "nxis:signals": {
+          "vector_score": 0.8381900787353516,
+          "vector_rank": 10,
+          "fused": 0.014285714285714285
+        }
+      },
+      {
+        "@type": "ImageObject",
+        "@id": "https://wrenfield.example/art/night-table-minneapolis-2027-05-22.svg",
+        "nxis:score": 0.8381404876708984,
+        "nxis:signals": {
+          "vector_score": 0.8381404876708984,
+          "vector_rank": 11,
+          "fused": 0.014084507042253521
+        }
+      },
+      {
+        "@type": "ImageObject",
+        "@id": "https://wrenfield.example/art/open-signal-denver-2027.svg",
+        "nxis:score": 0.8379764556884766,
+        "nxis:signals": {
+          "vector_score": 0.8379764556884766,
+          "vector_rank": 12,
+          "fused": 0.013888888888888888
+        }
+      },
+      {
+        "@type": "ImageObject",
+        "@id": "https://wrenfield.example/art/field-days-denver-2027.svg",
+        "nxis:score": 0.8378772735595703,
+        "nxis:signals": {
+          "vector_score": 0.8378772735595703,
+          "vector_rank": 13,
+          "fused": 0.0136986301369863
+        }
+      },
+      {
+        "@type": "ImageObject",
+        "@id": "https://wrenfield.example/art/low-light-denver-2027-10-29.svg",
+        "nxis:score": 0.8378238677978516,
+        "nxis:signals": {
+          "vector_score": 0.8378238677978516,
+          "vector_rank": 14,
+          "fused": 0.013513513513513514
+        }
+      },
+      {
+        "@type": "ImageObject",
+        "@id": "https://wrenfield.example/art/field-days-denver-2027.svg",
+        "nxis:score": 0.83746337890625,
+        "nxis:signals": {
+          "vector_score": 0.83746337890625,
+          "vector_rank": 15,
+          "fused": 0.013333333333333334
+        }
+      },
+      {
+        "@type": "ImageObject",
+        "@id": "https://wrenfield.example/art/bench-sessions-pittsburgh-2027-05-15.svg",
+        "nxis:score": 0.8374061584472656,
+        "nxis:signals": {
+          "vector_score": 0.8374061584472656,
+          "vector_rank": 16,
+          "fused": 0.013157894736842105
+        }
+      },
+      {
+        "@type": "ImageObject",
+        "@id": "https://wrenfield.example/art/field-days-minneapolis-2027.svg",
+        "nxis:score": 0.8372917175292969,
+        "nxis:signals": {
+          "vector_score": 0.8372917175292969,
+          "vector_rank": 17,
+          "fused": 0.012987012987012988
+        }
+      },
+      {
+        "name": "Bench Sessions Minneapolis: Print a Poster by Hand",
+        "url": "https://wrenfield.example/events/bench-sessions-minneapolis-2027-03-27/",
+        "@type": "ItemPage",
+        "@id": "https://wrenfield.example/events/bench-sessions-minneapolis-2027-03-27",
+        "nxis:score": 0.8368644714355469,
+        "nxis:signals": {
+          "vector_score": 0.8368644714355469,
+          "vector_rank": 18,
+          "fused": 0.01282051282051282
+        }
+      },
+      {
+        "@type": "ImageObject",
+        "@id": "https://wrenfield.example/art/side-room-austin-2027-09-24.svg",
+        "nxis:score": 0.8368072509765625,
+        "nxis:signals": {
+          "vector_score": 0.8368072509765625,
+          "vector_rank": 19,
+          "fused": 0.012658227848101266
+        }
+      },
+      {
+        "@type": "ImageObject",
+        "@id": "https://wrenfield.example/art/night-table-minneapolis-2027-10-23.svg",
+        "nxis:score": 0.8368034362792969,
+        "nxis:signals": {
+          "vector_score": 0.8368034362792969,
+          "vector_rank": 20,
+          "fused": 0.0125
+        }
+      }
+    ],
+    "Are fees and taxes included in the price?": [
+      {
+        "@type": "FAQPage",
+        "@id": "https://wrenfield.example/faq",
+        "nxis:score": 0.9671745300292969,
+        "nxis:passage": {
+          "path": "mainEntity[0]",
+          "id": "https://wrenfield.example/faq#question-92dcc04f",
+          "score": 0.9671745300292969
+        },
+        "nxis:signals": {
+          "vector_score": 0.9671745300292969,
+          "vector_rank": 1,
+          "keyword_score": 4.447474747474748,
+          "keyword_rank": 1,
+          "fused": 0.03278688524590164
+        }
+      },
+      {
+        "name": "Events",
+        "url": "https://wrenfield.example/events/",
+        "@type": "CollectionPage",
+        "@id": "https://wrenfield.example/events",
+        "nxis:score": 0.8538703918457031,
+        "nxis:signals": {
+          "vector_score": 0.8538703918457031,
+          "vector_rank": 3,
+          "keyword_score": 0.55,
+          "keyword_rank": 3,
+          "fused": 0.031746031746031744
+        }
+      },
+      {
+        "url": "https://wrenfield.example/",
+        "@type": "WebSite",
+        "name": "Wrenfield",
+        "@id": "https://wrenfield.example/#website/wrenfield",
+        "nxis:score": 0.8553581237792969,
+        "nxis:signals": {
+          "vector_score": 0.8553581237792969,
+          "vector_rank": 2,
+          "fused": 0.016129032258064516
+        }
+      },
+      {
+        "@type": "ProfilePage",
+        "@id": "https://wrenfield.example/people/priya-nambiar-scott",
+        "nxis:signals": {
+          "keyword_score": 1.2857142857142856,
+          "keyword_rank": 2,
+          "fused": 0.016129032258064516
+        }
+      },
+      {
+        "@type": "ImageObject",
+        "@id": "https://wrenfield.example/art/low-light-minneapolis-2027-05-07.svg",
+        "nxis:score": 0.8516693115234375,
+        "nxis:signals": {
+          "vector_score": 0.8516693115234375,
+          "vector_rank": 4,
+          "fused": 0.015625
+        }
+      },
+      {
+        "@type": "ImageObject",
+        "@id": "https://wrenfield.example/art/low-light-denver-2027-10-29.svg",
+        "nxis:score": 0.8510875701904297,
+        "nxis:signals": {
+          "vector_score": 0.8510875701904297,
+          "vector_rank": 5,
+          "fused": 0.015384615384615385
+        }
+      },
+      {
+        "name": "Salt Year",
+        "@type": "Movie",
+        "@id": "https://wrenfield.example/events/low-light-denver-2027-03-12#movie",
+        "nxis:score": 0.8508644104003906,
+        "nxis:signals": {
+          "vector_score": 0.8508644104003906,
+          "vector_rank": 6,
+          "fused": 0.015151515151515152
+        }
+      },
+      {
+        "name": "Furnace Songs",
+        "@type": "Movie",
+        "@id": "https://wrenfield.example/events/low-light-pittsburgh-2027-09-10#movie",
+        "nxis:score": 0.8507423400878906,
+        "nxis:signals": {
+          "vector_score": 0.8507423400878906,
+          "vector_rank": 7,
+          "fused": 0.014925373134328358
+        }
+      },
+      {
+        "@type": "ImageObject",
+        "@id": "https://wrenfield.example/art/low-light-denver-2027-03-12.svg",
+        "nxis:score": 0.8506717681884766,
+        "nxis:signals": {
+          "vector_score": 0.8506717681884766,
+          "vector_rank": 8,
+          "fused": 0.014705882352941176
+        }
+      },
+      {
+        "@type": "ImageObject",
+        "@id": "https://wrenfield.example/art/side-room-minneapolis-2027-03-26.svg",
+        "nxis:score": 0.8506393432617188,
+        "nxis:signals": {
+          "vector_score": 0.8506393432617188,
+          "vector_rank": 9,
+          "fused": 0.014492753623188406
+        }
+      },
+      {
+        "@type": "ImageObject",
+        "@id": "https://wrenfield.example/art/low-light-pittsburgh-2027-09-10.svg",
+        "nxis:score": 0.8502769470214844,
+        "nxis:signals": {
+          "vector_score": 0.8502769470214844,
+          "vector_rank": 10,
+          "fused": 0.014285714285714285
+        }
+      },
+      {
+        "@type": "ImageObject",
+        "@id": "https://wrenfield.example/art/field-days-denver-2027.svg",
+        "nxis:score": 0.8501701354980469,
+        "nxis:signals": {
+          "vector_score": 0.8501701354980469,
+          "vector_rank": 11,
+          "fused": 0.014084507042253521
+        }
+      },
+      {
+        "@type": "ImageObject",
+        "@id": "https://wrenfield.example/art/bench-sessions-pittsburgh-2027-05-15.svg",
+        "nxis:score": 0.8500404357910156,
+        "nxis:signals": {
+          "vector_score": 0.8500404357910156,
+          "vector_rank": 12,
+          "fused": 0.013888888888888888
+        }
+      },
+      {
+        "@type": "ImageObject",
+        "@id": "https://wrenfield.example/art/side-room-denver-2027-08-06.svg",
+        "nxis:score": 0.8498744964599609,
+        "nxis:signals": {
+          "vector_score": 0.8498744964599609,
+          "vector_rank": 13,
+          "fused": 0.0136986301369863
+        }
+      },
+      {
+        "@type": "ImageObject",
+        "@id": "https://wrenfield.example/art/low-light-savannah-2027-07-09.svg",
+        "nxis:score": 0.8497829437255859,
+        "nxis:signals": {
+          "vector_score": 0.8497829437255859,
+          "vector_rank": 14,
+          "fused": 0.013513513513513514
+        }
+      },
+      {
+        "@type": "ImageObject",
+        "@id": "https://wrenfield.example/art/side-room-savannah-2027-05-28.svg",
+        "nxis:score": 0.8496608734130859,
+        "nxis:signals": {
+          "vector_score": 0.8496608734130859,
+          "vector_rank": 15,
+          "fused": 0.013333333333333334
+        }
+      },
+      {
+        "@type": "ImageObject",
+        "@id": "https://wrenfield.example/art/bench-sessions-minneapolis-2027-03-27.svg",
+        "nxis:score": 0.8496475219726562,
+        "nxis:signals": {
+          "vector_score": 0.8496475219726562,
+          "vector_rank": 16,
+          "fused": 0.013157894736842105
+        }
+      },
+      {
+        "url": "https://wrenfield.example/venues/",
+        "@type": "CollectionPage",
+        "name": "Venues",
+        "@id": "https://wrenfield.example/venues",
+        "nxis:score": 0.8496131896972656,
+        "nxis:signals": {
+          "vector_score": 0.8496131896972656,
+          "vector_rank": 17,
+          "fused": 0.012987012987012988
+        }
+      },
+      {
+        "@type": "ImageObject",
+        "@id": "https://wrenfield.example/art/side-room-pittsburgh-2027-04-09.svg",
+        "nxis:score": 0.849395751953125,
+        "nxis:signals": {
+          "vector_score": 0.849395751953125,
+          "vector_rank": 18,
+          "fused": 0.01282051282051282
+        }
+      },
+      {
+        "@type": "ImageObject",
+        "@id": "https://wrenfield.example/art/side-room-minneapolis-2027-11-19.svg",
+        "nxis:score": 0.8493747711181641,
+        "nxis:signals": {
+          "vector_score": 0.8493747711181641,
+          "vector_rank": 19,
+          "fused": 0.012658227848101266
+        }
+      }
+    ]
+  }
+}
