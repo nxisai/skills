@@ -1,0 +1,108 @@
+########################################################################
+# Closes pull requests from outside the organization, with an explanation.
+#
+# GitHub cannot disable pull requests on a public repository, so the policy
+# in CONTRIBUTING.md is enforced here instead.
+#
+# Runs only in nxisai/skills; anywhere else the repository check below
+# skips it.
+#
+# This runs on `pull_request_target`, which carries write permissions, so it
+# deliberately NEVER checks out the pull request's code. Nothing from the
+# fork is executed — the job only reads the event payload and posts a
+# comment. Do not add `actions/checkout` to this workflow.
+########################################################################
+
+name: Pull request policy
+
+on:
+  pull_request_target:
+    types: [opened]
+
+permissions:
+  pull-requests: write
+  issues: write
+
+jobs:
+  close:
+    runs-on: ubuntu-latest
+    # The repository check keeps it to the public mirror. The association
+    # checks are a fast path only: author_association reports a member whose
+    # organization membership is private as an outsider, so the decision is
+    # made below, from the author's permission on the repository.
+    if: >-
+      github.repository == 'nxisai/skills' &&
+      github.event.pull_request.author_association != 'OWNER' &&
+      github.event.pull_request.author_association != 'MEMBER' &&
+      github.event.pull_request.author_association != 'COLLABORATOR'
+    steps:
+      - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        with:
+          script: |
+            const author = context.payload.pull_request.user.login;
+            const number = context.payload.pull_request.number;
+
+            // Dependabot keeps the action pins current; its pull requests stay open.
+            if (author === 'dependabot[bot]') {
+              core.info('Dependabot pull request; leaving it open.');
+              return;
+            }
+
+            // Anyone who can push here is one of us, however their membership is
+            // shown. A lookup that fails (an outsider is not a collaborator) means
+            // the policy applies.
+            try {
+              const { data } = await github.rest.repos.getCollaboratorPermissionLevel({
+                ...context.repo,
+                username: author,
+              });
+              if (['admin', 'maintain', 'write'].includes(data.permission)) {
+                core.info(`${author} has ${data.permission} access; leaving the pull request open.`);
+                return;
+              }
+            } catch (error) {
+              core.info(`No repository permission found for ${author}: ${error.message}`);
+            }
+
+            const body = [
+              `Thank you for this, @${author} — and sorry to close it.`,
+              ``,
+              `We are not accepting pull requests yet. The skills change quickly alongside`,
+              `the platform they drive, and an edit written this week can be invalidated by`,
+              `next week's changes through no fault of yours. Asking for changes against that`,
+              `would waste your time, so we would rather say no clearly than leave it open.`,
+              ``,
+              `**The problem you found is still welcome.** If you open an issue describing`,
+              `it, we will fix it and credit you by name in the commit that does. That gets your`,
+              `name on the change without either of us pretending this could be merged.`,
+              ``,
+              `[CONTRIBUTING.md](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/CONTRIBUTING.md)`,
+              `has the detail, including what has to be true before this changes.`,
+              ``,
+              `If this is a security report, please do not put details in a public issue —`,
+              `[SECURITY.md](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/SECURITY.md)`,
+              `has a private channel.`,
+            ].join('\n');
+
+            await github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: number,
+              body,
+            });
+
+            // A missing label should not fail the job; closing matters more.
+            try {
+              await github.rest.issues.addLabels({
+                ...context.repo,
+                issue_number: number,
+                labels: ['not-accepting-prs'],
+              });
+            } catch (error) {
+              core.warning(`Could not apply the label: ${error.message}`);
+            }
+
+            await github.rest.pulls.update({
+              ...context.repo,
+              pull_number: number,
+              state: 'closed',
+            });
