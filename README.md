@@ -12,24 +12,25 @@ Each skill is a folder containing a `SKILL.md`: YAML frontmatter that an agent h
 
 ## Skills
 
-| | Skill | What it does | Stage |
-|---|---|---|---|
-| 🔑 | [nxis-account-setup](skills/nxis-account-setup/SKILL.md) | Takes a user from no account to a working provisioning connection from the terminal: sign in, name the organization, choose a plan, install the MCP key | Set up |
-| 🚀 | [agentic-site-onboarding](skills/agentic-site-onboarding/SKILL.md) | Signs in, picks a plan, creates and verifies a site, crawls its sitemap, generates and publishes structured data, turns on its MCP server, writes its discovery documents and the site tag, and turns on the hosted agents, through the `nxis` CLI or MCP | Set up |
-| 📡 | [mcp-discovery-publishing](skills/mcp-discovery-publishing/SKILL.md) | Publishes `ai-catalog.json` and `mcp/catalog.json` so agents can find the site's MCP server unaided, then confirms the server answers | Set up |
-| 🏷️ | [site-tag-installation](skills/site-tag-installation/SKILL.md) | Installs the NxisAI site tag so every page carries its JSON-LD and registers its actions as WebMCP tools | Set up |
-| 🔀 | [action-binding](skills/action-binding/SKILL.md) | Routes a site's actions to a webhook in the user's own application, stores the signing secret where a redeploy finds it, and adds a handler that verifies the signature | Set up |
-| 💬 | [on-page-agent](skills/on-page-agent/SKILL.md) | Mounts [`@nxisai/agent-harness`](https://www.npmjs.com/package/@nxisai/agent-harness) on the site, wires it to the page's tools and the site's MCP server, and proves it works in production | Set up |
-| 🛰️ | [agent-model-proxy](skills/agent-model-proxy/SKILL.md) | Writes the server endpoint that runs the on-page agent's model, with origin, rate and size limits and a credential the browser never sees | Set up |
-| 🤝 | [agent-handoff](skills/agent-handoff/SKILL.md) | Lets the on-page agent hand a conversation to another agent (A2A) or to a person on the team, through a relay on the site's own origin that holds the credentials and the allowlist | Set up |
-| 🧾 | [quote-agent](skills/quote-agent/SKILL.md) | Takes quote requests in conversation instead of the page's quote form: one question a turn, sends only on the visitor's explicit yes, once, to the form's own sink, and hands back its reference | Set up |
-| 🛟 | [support-agent](skills/support-agent/SKILL.md) | Answers how-to, product and policy questions from the site's own help content, read-only and cited by `@id`; FAQ answers are quoted exactly, and with nothing to cite it says so and offers a person. Its one write is a content gap report that carries no personal data and no question text | Set up |
-| 🗓️ | [booking-agent](skills/booking-agent/SKILL.md) | Takes booking requests in conversation instead of the page's booking form: offers only the site's free slots in its time zone, books only on the visitor's explicit yes, re-checks the slot at that moment, books once, and hands back the sink's reference | Set up |
-| 🎚️ | [agent-harness-model-bench](skills/agent-harness-model-bench/SKILL.md) | Runs the agent harness's cases in a real browser against several models at once, and scores the tool each one called, what it filled in and what the page showed, with cost and latency | Evaluate |
-| 🧭 | [typed-retrieval](skills/typed-retrieval/SKILL.md) | Lists the schema.org types a site exposes, queries them with field filters, and fetches full records by JSON-LD `@id` | Retrieve |
-| 📨 | [lead-funnel-quote](skills/lead-funnel-quote/SKILL.md) | Sends a quote or contact request to up to three providers under one consent | Act |
-| 📅 | [lead-funnel-reservation](skills/lead-funnel-reservation/SKILL.md) | Checks and reserves a time slot, with no payment | Act |
-| 📋 | [lead-funnel-application](skills/lead-funnel-application/SKILL.md) | Files a job, program, rental, permit or financial-product application after the user reviews every field | Act |
+| Skill | What it does | Stage |
+|---|---|---|
+| [nxis-account-setup](skills/nxis-account-setup/SKILL.md) | Takes a user from no account to a working provisioning connection: sign in, name the organization, choose a plan, and install NxisAI's local MCP server, which uses the CLI's sign-in instead of a key | Set up |
+| [agentic-site-onboarding](skills/agentic-site-onboarding/SKILL.md) | Signs in, picks a plan, creates and verifies a site, crawls its sitemap, generates and publishes structured data, turns on its MCP server, writes its discovery documents and the site tag, and turns on the hosted agents, through the `nxis` CLI or MCP | Set up |
+| [hosted-agents](skills/hosted-agents/SKILL.md) | Turns on, configures, pauses and checks the agents NxisAI hosts on a site's pages (the page agent, Support, Quote, Booking and the rest of the catalog), with the connection each needs and the data processing agreement, and reads back whether visitors reach them | Set up |
+| [mcp-discovery-publishing](skills/mcp-discovery-publishing/SKILL.md) | Publishes `ai-catalog.json` and `mcp/catalog.json` so agents can find the site's MCP server unaided, then confirms the server answers | Set up |
+| [site-tag-installation](skills/site-tag-installation/SKILL.md) | Installs the NxisAI site tag so every page carries its JSON-LD and registers its actions as WebMCP tools | Set up |
+| [action-binding](skills/action-binding/SKILL.md) | Routes a site's actions to a webhook in the user's own application, stores the signing secret where a redeploy finds it, and adds a handler that verifies the signature | Set up |
+| [on-page-agent](skills/on-page-agent/SKILL.md) | Mounts [`@nxisai/agent-harness`](https://www.npmjs.com/package/@nxisai/agent-harness) on the site, wires it to the page's tools and the site's MCP server, and proves it works in production | Set up |
+| [agent-model-proxy](skills/agent-model-proxy/SKILL.md) | Writes the server endpoint that runs the on-page agent's model, with origin, rate and size limits and a credential the browser never sees | Set up |
+| [agent-handoff](skills/agent-handoff/SKILL.md) | Lets the on-page agent hand a conversation to another agent (A2A) or to a person on the team, through a relay on the site's own origin that holds the credentials and the allowlist | Set up |
+| [quote-agent](skills/quote-agent/SKILL.md) | Takes quote requests in conversation instead of the page's quote form: one question a turn, sends only on the visitor's explicit yes, once, to the form's own sink, and hands back its reference | Set up |
+| [support-agent](skills/support-agent/SKILL.md) | Answers how-to, product and policy questions from the site's own help content, read-only and cited by `@id`; FAQ answers are quoted exactly, and with nothing to cite it says so and offers a person. Its one write is a content gap report that carries no personal data and no question text | Set up |
+| [booking-agent](skills/booking-agent/SKILL.md) | Takes booking requests in conversation instead of the page's booking form: offers only the site's free slots in its time zone, books only on the visitor's explicit yes, re-checks the slot at that moment, books once, and hands back the sink's reference | Set up |
+| [agent-harness-model-bench](skills/agent-harness-model-bench/SKILL.md) | Runs the agent harness's cases in a real browser against several models at once, and scores the tool each one called, what it filled in and what the page showed, with cost and latency | Evaluate |
+| [typed-retrieval](skills/typed-retrieval/SKILL.md) | Lists the schema.org types a site exposes, queries them with field filters, and fetches full records by JSON-LD `@id` | Retrieve |
+| [lead-funnel-quote](skills/lead-funnel-quote/SKILL.md) | Sends a quote or contact request to up to three providers under one consent | Act |
+| [lead-funnel-reservation](skills/lead-funnel-reservation/SKILL.md) | Checks and reserves a time slot, with no payment | Act |
+| [lead-funnel-application](skills/lead-funnel-application/SKILL.md) | Files a job, program, rental, permit or financial-product application after the user reviews every field | Act |
 
 ## Getting started
 
@@ -37,7 +38,7 @@ Each skill is a folder containing a `SKILL.md`: YAML frontmatter that an agent h
 
 Install with the open [`skills`](https://www.npmjs.com/package/skills) CLI, from the project that builds your site.
 
-**Claude Code**: all sixteen skills, into this project:
+**Claude Code**: all seventeen skills, into this project:
 
 ```bash
 npx -y skills add nxisai/skills --skill '*' --yes --agent claude-code
@@ -61,13 +62,23 @@ Each skill is a plain `SKILL.md`, so read it before you run it.
 
 ### 2. Connect to NxisAI
 
-The setup skills call NxisAI's provisioning tools through the `nxis` CLI (`npx -y @nxisai/cli`) or through an MCP server scoped to your organization. `agentic-site-onboarding` asks which one to use and recommends the CLI, which signs you in through the browser and keeps its credential in the OS keychain, so there is nothing more to set up here.
+The setup skills drive the `nxis` CLI, version 0.2.0 or later. Install it with the signed installer on macOS and Linux (and Windows inside WSL):
 
-To use MCP instead:
+```bash
+curl -fsSL https://github.com/nxisai/cli/releases/latest/download/install.sh | sh
+```
 
-**If you have no account yet,** ask your agent to run `nxis-account-setup`. It signs you in, creates the organization, takes you through a plan, and installs the key into this agent's config — the only steps it hands back to you are signing in and paying, because those belong to a person.
+or run it without installing, anywhere with Node.js 20 or later, as `npx -y @nxisai/cli@latest`. The CLI signs you in through the browser and keeps its credential in the OS keychain, so there is nothing more to set up here.
 
-**If you already have an organization id and API key,** add the server yourself. In Claude Code:
+`agentic-site-onboarding` asks once how your agent should reach NxisAI:
+
+- **The local MCP server** (`nxis mcp install`), recommended when your agent can show a server's own questions (MCP elicitation; Claude Code can). The plan, credits, the agreement and every yes come to you as dialogs, and no key goes into the agent's config
+- **The CLI**, `nxis … --json` in the agent's shell, when the agent can't show those dialogs or you prefer commands. The agent puts each decision to you in the conversation
+- **The remote MCP server** (`nxis mcp install --remote`), only when the agent can't start a local process. It writes an MCP key into the agent's config
+
+**If you have no account yet,** ask your agent to run `nxis-account-setup`. It signs you in, creates the organization, takes you through a plan, and installs the local MCP server. The only steps it hands back to you are signing in and paying, because those belong to a person.
+
+**If you already have an organization id and API key,** you can add the remote server by hand instead. In Claude Code:
 
 ```bash
 claude mcp add --transport http nxis-onboarding \
@@ -84,10 +95,13 @@ Ask your agent to run `agentic-site-onboarding`. It will:
 - Ask for your site's URL rather than guessing it from the repository
 - Stop when verification needs a deploy. Deploy to production, because a preview won't verify
 - Show you the resource count and credit balance, and wait for an explicit yes, before generating structured data
+- Put the site tag on your pages and, once you say yes, turn on NxisAI's hosted agents, which the tag brings with it: no package, script or model key goes into the site
 
-### 4. Put it on your own pages (optional)
+To change the hosted agents later, or pause them, run `hosted-agents`.
 
-Run `site-tag-installation`, then `on-page-agent`. If the agent's model should run on your site's server, `on-page-agent` calls `agent-model-proxy` to write the endpoint.
+### 4. Host the agent yourself (optional)
+
+To run the agent on your own pages with your own model instead of the hosted one, run `site-tag-installation`, then `on-page-agent`. If the agent's model should run on your site's server, `on-page-agent` calls `agent-model-proxy` to write the endpoint.
 
 ### 5. Send actions to your own backend (optional)
 
@@ -99,7 +113,7 @@ Once the discovery documents are deployed, run `mcp-discovery-publishing`. It ch
 
 ### Hand it to your agent
 
-Everything above is also written for a coding agent to follow at [nxis.ai/developers](https://nxis.ai/developers#for-agents). Paste that block into your agent, or point the agent at the page, and it will ask you for the rest.
+The whole setup is also written for a coding agent to follow, with no skill installed, at [nxis.ai/agent-setup.md](https://nxis.ai/agent-setup.md). Point your agent at it from the project that builds your site, and it will ask you for the rest. The skills are the longer version of those steps, with the edge cases.
 
 ## How they fit together
 
@@ -140,7 +154,7 @@ Several of these skills spend money, change what a site serves publicly, or send
 
 ## Requirements
 
-- **A NxisAI account, for the setup skills.** They call the provisioning server from [step 2](#2-connect-nxisais-provisioning-server) with your organization's API key. Generating structured data spends credits on your NxisAI plan, and onboarding shows you the count before it asks. The skills themselves are free
+- **A NxisAI account, for the setup skills.** They reach NxisAI through the `nxis` CLI or an MCP server, as in [step 2](#2-connect-to-nxisai). Generating structured data spends credits on your NxisAI plan, and onboarding shows you the count before it asks. The skills themselves are free
 - **A site's MCP server, for retrieval and the funnels.** `typed-retrieval` works against any public NxisAI MCP server: its read tools (`nxis_list_types`, `nxis_query`, `nxis_get`) need no key. The funnels need a signed-in caller, because `nxis_action` never writes anonymously
 - **For the setup skills:** the site's source project, and the ability to deploy it. Verification needs a tag live on the production site, which the user deploys
 - **For `on-page-agent`:** `@nxisai/agent-harness` 0.2.4 or later. A remote model also needs a host that runs server code
@@ -175,7 +189,7 @@ skills/
 
 Every `SKILL.md` has:
 
-1. **Frontmatter**: `name`, `display_name`, `icon`, `source`, `description`, `license`, `metadata`, `allowed_tools` and `enabled`, plus `compatibility` when the skill depends on where the site is hosted
+1. **Frontmatter**: `name`, `display_name`, `icon` (a [Heroicons](https://heroicons.com/) v2 outline name in kebab case, such as `rocket-launch`, never an emoji), `source`, `description`, `license`, `metadata`, `allowed_tools` and `enabled`, plus `compatibility` when the skill depends on where the site is hosted
 2. A one-line summary
 3. **When this skill applies**: the conditions that must all hold, and the exclusions, each naming the skill to use instead
 4. The pattern, as numbered steps
@@ -196,4 +210,4 @@ A few rules hold across the library:
 
 ## License
 
-[Apache License 2.0](LICENSE)
+[Apache License 2.0](LICENSE). The NxisAI name and logo are not covered by it; see [TRADEMARK.md](TRADEMARK.md) and [NOTICE](NOTICE).

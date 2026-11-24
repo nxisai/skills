@@ -1,7 +1,7 @@
 ---
 name: typed-retrieval
 display_name: Typed Retrieval
-icon: 🧭
+icon: magnifying-glass
 source: NXISAI
 description: >
   General-purpose discovery over any NxisAI-indexed corpus: list the

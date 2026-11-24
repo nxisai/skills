@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/nxisai/skills/security/advisories/new
+    about: Please report security problems privately, never in a public issue.
+  - name: Why are pull requests closed?
+    url: https://github.com/nxisai/skills/blob/main/CONTRIBUTING.md
+    about: What we can accept today, and what has to be true before that changes.

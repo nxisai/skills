@@ -4,7 +4,7 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { test } from 'node:test';
-import { findInternal } from './check-public.mjs';
+import { findBadIcon, findInternal } from './check-public.mjs';
 
 const HASH = '#';
 const PRIVATE = ['nxisai', 'some-private-repo'].join('/');
@@ -26,8 +26,20 @@ test('finds a hidden name by its hash', () => {
 
 test('allows the public repositories, Terraform, CSS colors and placeholder addresses', () => {
   assert.deepEqual(findInternal('npx skills add nxisai/skills; git clone https://github.com/nxisai/agent-harness.git'), []);
+  assert.deepEqual(findInternal('curl -fsSL https://github.com/nxisai/cli/releases/latest/download/install.sh | sh'), []);
+  assert.deepEqual(hits(`see ${['nxisai', 'cli-internal'].join('/')}`), ['a private repository']);
   assert.deepEqual(findInternal('Deploy it with Terraform: terraform apply'), []);
   assert.deepEqual(findInternal(`color: ${HASH}000; background: light-dark(${HASH}eee, ${HASH}111)`), []);
   assert.deepEqual(findInternal('you@example.com, git@github.com, a@b.test'), []);
   assert.deepEqual(findInternal('BASE_URL=http://host.docker.internal:4130 or gateway.docker.internal'), []);
+});
+
+test('a skill icon is a Heroicons name, not an emoji', () => {
+  const skill = (icon) => `---\nname: x\ndisplay_name: X\n${icon}\nsource: NXISAI\n---\n\nBody\n`;
+  assert.deepEqual(findBadIcon(skill('icon: rocket-launch'), 'skills/x/SKILL.md'), []);
+  assert.deepEqual(findBadIcon(skill('icon: "chat-bubble-left-right"'), 'skills/x/SKILL.md'), []);
+  assert.equal(findBadIcon(skill('icon: \u{1F680}'), 'skills/x/SKILL.md')[0].line, 4);
+  assert.equal(findBadIcon(skill('icon: Rocket Launch'), 'skills/x/SKILL.md').length, 1);
+  assert.equal(findBadIcon(skill('source: x'), 'skills/x/SKILL.md').length, 1);
+  assert.deepEqual(findBadIcon(skill('icon: \u{1F680}'), 'README.md'), []);
 });

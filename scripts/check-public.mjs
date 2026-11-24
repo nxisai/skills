@@ -16,11 +16,11 @@ import { join, relative } from "node:path";
 import { pathToFileURL } from "node:url";
 
 /**
- * What may not appear, and why. The public repositories are these skills and the agent harness;
- * an npm package name (@nxisai/…) is public too.
+ * What may not appear, and why. The public repositories are these skills, the agent harness and
+ * the CLI; an npm package name (@nxisai/…) is public too.
  */
 export const RULES = [
-  { why: "a private repository", re: /(?<!@)\bnxisai\/(?!(?:agent-harness|skills)(?![\w-]))[A-Za-z0-9_.-]+/g },
+  { why: "a private repository", re: /(?<!@)\bnxisai\/(?!(?:agent-harness|cli|skills)(?![\w-]))[A-Za-z0-9_.-]+/g },
   { why: "an issue or pull request reference", re: /\b[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+#\d+\b/g },
   {
     // Not a CSS color: #0000, \`color: #333\`, \`light-dark(#eee, #111)\`. No issue is numbered 0.
@@ -137,6 +137,24 @@ export function findInternal(text, hidden = HIDDEN, file = "") {
   return found;
 }
 
+/**
+ * A skill's `icon` is a Heroicons (v2, outline) name in kebab case, such as `rocket-launch`, which the
+ * host draws as an SVG in its own colors; never an emoji, which renders differently everywhere.
+ *
+ * @returns The problem with a SKILL.md's `icon`, as findInternal reports one; none for other files.
+ */
+export function findBadIcon(text, file = "") {
+  if (!/(?:^|\/)SKILL\.md$/.test(file)) return [];
+  const front = text.match(/^---\n([\s\S]*?)\n---/);
+  if (!front) return [];
+  const lines = front[1].split("\n");
+  const i = lines.findIndex((l) => /^icon:/.test(l));
+  if (i < 0) return [{ line: 1, match: "icon", why: "no icon: give a Heroicons name, such as rocket-launch" }];
+  const value = lines[i].slice("icon:".length).trim().replace(/^(["'])(.*)\1$/, "$2");
+  if (/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value)) return [];
+  return [{ line: i + 2, match: value, why: "an icon that isn't a Heroicons name, such as rocket-launch" }];
+}
+
 function* files(path) {
   const st = statSync(path);
   if (st.isDirectory()) {
@@ -166,7 +184,8 @@ export function checkPaths(paths) {
         if (SKIP.some((s) => s.test(rel))) continue;
         const bytes = readFileSync(file);
         if (bytes.includes(0)) continue; // binary
-        for (const p of findInternal(bytes.toString("utf8"), HIDDEN, rel)) {
+        const text = bytes.toString("utf8");
+        for (const p of [...findInternal(text, HIDDEN, rel), ...findBadIcon(text, rel)]) {
           problems.push(`${tmp ? `${given}:` : ""}${tmp ? rel : file}:${p.line}: ${p.match} (${p.why})`);
         }
       }
@@ -185,7 +204,7 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   }
   const problems = checkPaths(paths);
   if (problems.length) {
-    console.error(`check-public: ${problems.length} internal reference(s) in what ships:\n${problems.map((p) => `  ${p}`).join("\n")}`);
+    console.error(`check-public: ${problems.length} problem(s) in what ships:\n${problems.map((p) => `  ${p}`).join("\n")}`);
     process.exit(1);
   }
   console.log(`check-public: nothing internal in ${paths.length} path(s)`);

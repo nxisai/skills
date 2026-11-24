@@ -71,11 +71,27 @@ export interface HandoffRecord {
   pushToken?: string;
   reason?: string;
   consent?: unknown;
+  /** What `keptRecord` keeps of the envelope's `contact`: the email, and for a person target the phone and name. */
   contact?: { email?: string; phone?: string; name?: string };
   page?: { url?: string; title?: string };
   createdAt: string;
   lastSeen: number;
   emailed?: string[];
+}
+
+/**
+ * A handoff record as kept: the visitor's email address, so a request from them finds their records by it (and a
+ * person can reply to it after they have gone); for a person target also the phone and name they left. Nothing else
+ * of the envelope's `contact`: an agent target may be sent the visitor's full details (a street, city and ZIP code
+ * among them) for the conversation it has with them, but those are the agent's to use while it lasts, not the
+ * relay's to keep for 30 days. Blank values and any other field are dropped; a contact with nothing left goes.
+ */
+export function keptRecord(r: HandoffRecord, kind: "agent" | "person" | undefined): HandoffRecord {
+  if (!r.contact) return r;
+  const { contact, ...rest } = r;
+  const keys = kind === "person" ? (["email", "phone", "name"] as const) : (["email"] as const);
+  const kept = Object.fromEntries(keys.filter((k) => typeof contact[k] === "string" && contact[k]).map((k) => [k, contact[k]]));
+  return Object.keys(kept).length ? { ...rest, contact: kept } : rest;
 }
 
 interface Part {
@@ -193,7 +209,7 @@ export async function handleHandoff(req: Request, rest: string, opts: RelayOptio
           createdAt: new Date().toISOString(),
           lastSeen: Date.now(),
         };
-        await opts.store.set(`task:${task.id}`, record);
+        await opts.store.set(`task:${task.id}`, keptRecord(record, target.kind));
         if (pushToken) await opts.store.set(`push:${pushToken}`, { taskId: task.id });
       };
 

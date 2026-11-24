@@ -1,7 +1,7 @@
 ---
 name: agent-handoff
 display_name: Agent Handoff
-icon: 🤝
+icon: arrow-uturn-right
 source: NXISAI
 description: >
   Let a site's on-page agent hand a conversation to another agent (A2A 1.0)
@@ -16,7 +16,7 @@ compatibility: >
   Node server). Other hosts: asks five questions.
 metadata:
   author: nxisai
-  version: 1.0
+  version: 1.1
   type_group: _integration
 allowed_tools: []
 enabled: true
@@ -48,7 +48,7 @@ visitor ⇄ on-page agent ──same origin──▶ relay ──A2A 1.0──�
                                            └─ records: who, what was shared, how to reach them
 ```
 
-- **The relay** — `references/handoff-core.ts`, copied into the project unchanged, plus a thin adapter for the host. Origin and size checks, the target allowlist, a key per handoff so one visitor can't read another's, records kept 30 days, and follow-up by email for a person's reply that arrives after the visitor left
+- **The relay** — `references/handoff-core.ts`, copied into the project unchanged, plus a thin adapter for the host. Origin and size checks, the target allowlist, a key per handoff so one visitor can't read another's, records kept 30 days (with the visitor's email address, and for a person target their phone and name: never their address), and follow-up by email for a person's reply that arrives after the visitor left
 - **The targets** — an allowlist in the adapter. Each is an A2A endpoint the relay reaches with a credential only the server holds
 - **The page config** — `agent.handoff = { relay, targets }`, naming the same targets with the labels a visitor reads
 
@@ -99,7 +99,7 @@ For each target, ask whether the **transcript** — the visitor's last turns —
 A handoff sends what a visitor said to someone else. Put it to the user, and **wait for an explicit yes:**
 
 - Each handoff carries a summary the visitor sees and confirms, the page they were on, and — only if they give it — an email for a reply. With transcript sharing on for a target, their last turns go too
-- The relay keeps a record of each handoff for 30 days: who it went to, what was shared, and how to reach the visitor
+- The relay keeps a record of each handoff for 30 days: who it went to, the reason and the page, and how to reach the visitor. Of the details they left, it keeps the email address for every target (so a request from them can find their records) and, for a person target, the phone and name too. An agent target may be sent more for its conversation with them, a street address for a visit among it; the relay keeps none of that (`keptRecord`)
 - A partner's agent receives that data under the partner's terms. The site's privacy notice should say so
 
 Consent to an on-page agent is not consent to this.
@@ -138,7 +138,9 @@ Tell the prompts when to use them, in a sentence each: `talk_to_a_person` when t
 
 ### Step 6 — Test it on the host's local runtime
 
-Run the site on the host's local runtime from the profile, then:
+First, `references/handoff-core.test.ts` (vitest), copied beside the core: an agent target's record keeps only the visitor's email address, a person target's the email, phone and name, and neither keeps their street, city or ZIP code.
+
+Then run the site on the host's local runtime from the profile, and:
 
 | Check | Expect |
 |---|---|
@@ -222,4 +224,5 @@ This skill calls no NxisAI tools. Its work is files in the project and requests 
 | File | Purpose |
 |---|---|
 | `references/handoff-core.ts` | The relay: the contract and its defenses. Host-neutral; copy it unchanged |
+| `references/handoff-core.test.ts` | What a record keeps of the visitor's details, for each kind of target (vitest). Copy it beside the core |
 | The host adapter | Storage, secrets, origins, the rate limit and the push path — from `references/hosts/<host>.md` |

@@ -1,7 +1,7 @@
 ---
 name: support-agent
 display_name: Support Agent
-icon: 🛟
+icon: lifebuoy
 source: NXISAI
 description: >
   Give a site that runs @nxisai/agent-harness a read-only Support Agent over

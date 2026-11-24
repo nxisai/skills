@@ -1,7 +1,7 @@
 ---
 name: agent-harness-model-bench
 display_name: Agent Harness Model Bench
-icon: 🎚️
+icon: adjustments-horizontal
 source: NXISAI
 description: >
   Run the agent harness's case suite in a real browser against several models

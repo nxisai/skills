@@ -1,7 +1,7 @@
 ---
 name: on-page-agent
 display_name: On-Page Agent
-icon: 💬
+icon: chat-bubble-left-right
 source: NXISAI
 description: >
   Add @nxisai/agent-harness to a site: mount the agent, choose where its model

@@ -67,6 +67,8 @@ export function bookingPayload(b: Booking, timeZone: string): Record<string, str
   if (b.location) payload[k.location] = b.location.id;
   Object.assign(payload, { [k.slot]: b.slot.id, [k.start]: b.slot.start, [k.end]: b.slot.end, [k.timeZone]: timeZone });
   for (const f of FIELDS) payload[f.name] = b.values[f.name] ?? '';
+  // The source's hold on the slot, when its check held one: the receiver books the held seat, not another.
+  if (b.slot.hold) payload.hold_token = b.slot.hold.token;
   return payload;
 }
 
@@ -205,8 +207,9 @@ export function sign(secret: string, body: string, now = Date.now()): string {
  *
  * What the sink answers decides: `{ status: "confirmed", reference }` is booked;
  * `409 { status: "conflict", alternatives? }` is a slot taken since it was
- * checked (lead-funnel-reservation's shape); anything else failed. Read YOUR
- * sink's shape.
+ * checked (lead-funnel-reservation's shape), or, with `code: "hold_expired"`
+ * or `"hold_unknown"`, a hold that ended (the agent checks the slot again);
+ * anything else failed. Read YOUR sink's shape.
  */
 export function webhookSink(opts: { url: () => string; secret?: string; timeZone: string; fetch?: typeof fetch }): Sink {
   return async (b, key) => {
@@ -216,9 +219,10 @@ export function webhookSink(opts: { url: () => string; secret?: string; timeZone
       headers: { 'Content-Type': 'application/json', 'Idempotency-Key': key, ...(opts.secret ? { 'X-Nxis-Signature': sign(opts.secret, body) } : {}) },
       body,
     });
-    const answer = (await res.json().catch(() => null)) as { status?: string; reference?: string; reason?: string; alternatives?: Slot[] } | null;
+    const answer = (await res.json().catch(() => null)) as { status?: string; code?: string; reference?: string; reason?: string; alternatives?: Slot[] } | null;
     if (res.status === 409 || answer?.status === 'conflict') {
-      return { ok: false, conflict: true, alternatives: Array.isArray(answer?.alternatives) ? answer.alternatives : undefined };
+      const holdLost = answer?.code === 'hold_expired' || answer?.code === 'hold_unknown';
+      return { ok: false, conflict: true, alternatives: Array.isArray(answer?.alternatives) ? answer.alternatives : undefined, ...(holdLost ? { holdLost: true } : {}) };
     }
     if (!res.ok || answer?.status !== 'confirmed') return { ok: false, error: `webhook answered ${res.status}${answer?.reason ? `: ${answer.reason}` : ''}` };
     // Booked either way; a reference is passed on only when the sink gave one.

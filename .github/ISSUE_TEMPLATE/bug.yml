@@ -1,0 +1,71 @@
+name: Bug report
+description: A skill led the agent to do the wrong thing, stopped where it shouldn't, or its reference code is broken.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time. If this is a **security** problem, please close this and use
+        [SECURITY.md](https://github.com/nxisai/skills/blob/main/SECURITY.md) instead — it has a
+        private channel.
+
+  - type: input
+    id: skill
+    attributes:
+      label: The skill
+      description: Its folder name under `skills/`.
+      placeholder: "agentic-site-onboarding"
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you expected the agent to do, and what it did instead.
+      placeholder: |
+        I asked my agent to set up my site. After verification it crawled the sitemap
+        before checking that the sitemap named my own host.
+    validations:
+      required: true
+
+  - type: textarea
+    id: transcript
+    attributes:
+      label: The step, and what the agent or the command printed
+      description: >
+        The commands the agent ran and their output, or the part of the conversation where it went
+        wrong. Rendered as a code block, so no backticks needed.
+      render: shell
+      placeholder: |
+        $ nxis crawl submit --wait --json
+        { "ok": false, "reason": "...", "error": "..." }
+    validations:
+      required: false
+
+  - type: input
+    id: host
+    attributes:
+      label: Agent host and model
+      placeholder: "Claude Code with Claude Sonnet 5.5"
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Skill version and CLI version
+      description: The `version` in the skill's frontmatter (or the commit you installed from), and `nxis --version` if the skill uses the CLI.
+      placeholder: "3.3, nxis 0.2.0"
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: no-secrets
+    attributes:
+      label: Before you post
+      options:
+        - label: >
+            I have checked that what I pasted contains no access token, API key, signing secret or
+            other credential, and no personal details of anyone else.
+          required: true

@@ -1,7 +1,7 @@
 ---
 name: site-tag-installation
 display_name: Site Tag
-icon: 🏷️
+icon: tag
 source: NXISAI
 description: >
   Install the NxisAI site tag in a verified site's project so every page

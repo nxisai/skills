@@ -1,7 +1,7 @@
 ---
 name: lead-funnel-reservation
 display_name: Reservation Funnel
-icon: 📅
+icon: calendar
 source: NXISAI
 description: >
   Discover reservable businesses (restaurants, salons, clinics, classes)

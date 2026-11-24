@@ -1,7 +1,7 @@
 ---
 name: booking-agent
 display_name: Booking Agent
-icon: 🗓️
+icon: calendar-days
 source: NXISAI
 description: >
   Give a site that runs @nxisai/agent-harness a conversational Booking Agent
@@ -24,7 +24,7 @@ compatibility: >
   Other hosts: asks six questions.
 metadata:
   author: nxisai
-  version: 1.0
+  version: 1.4
   type_group: _integration
   harness_min: 0.12.0
   submit_policy: BOOKING
@@ -120,9 +120,10 @@ The core asks one thing of it:
 
 ```ts
 interface Availability {
-  slots(q: { service: string; location?: string; from: string; to: string; limit: number }): Promise<Slot[]>;
+  // `slot`: the visitor's pick, checked as itself (the only query that may hold). `times`: the part of the day asked for.
+  slots(q: { service: string; location?: string; from: string; to: string; limit: number; times?: [string, string]; slot?: Slot }): Promise<Slot[]>;
 }
-interface Slot { id: string; start: string; end: string; location?: string }   // ISO instants, with an offset or Z
+interface Slot { id: string; start: string; end: string; location?: string; hold?: { token: string; expires_at: string } }   // ISO instants, with an offset or Z
 ```
 
 - **Free slots only**, earliest first, starting in `[from, to)`. The `id` is the source's own: the sink is sent it back
@@ -130,7 +131,7 @@ interface Slot { id: string; start: string; end: string; location?: string }   /
 - **Read it server-side, at a URL fixed in configuration.** `httpAvailability` expects `GET <url>?service=&location=&from=&to=&limit=` answering `{ "slots": [...] }`; anything malformed is dropped. Write a small endpoint beside the site's booking code if there isn't one. Or implement `Availability` directly against the site's database
 - **No calendar, no agent.** The hosts offer the agent as unavailable (or refuse to start) without `BOOKING_AVAILABILITY_URL`. `BOOKING_EXAMPLE_CALENDAR=true` exists for trying it out
 
-**No holds.** The agent doesn't reserve a slot while the visitor reads the summary. At their yes it checks the slot again at the source, then books. If it is gone — taken on the site's own form, or by the sink's answer (409) — nothing is booked: the visitor sees fresh slots near the same preference, picks again, reads a new summary, and says yes again. A site whose booking system has holds can still use them inside `submit` (hold and confirm in one call); the agent's contract stays check-then-commit, as in **lead-funnel-reservation**.
+**Holds only when the source has them.** The agent doesn't reserve a slot itself while the visitor reads the summary. At their yes it checks the slot again at the source, then books. If the source's check holds a slot for a few minutes (action-binding's reference receiver does by default), only the slot the visitor picks is held. Listing the free slots to offer (a query without `slot`) must hold none: list a day's windows (the reference receiver answers a check with `date` alone with them, holding nothing) rather than checking each slot. When the visitor picks, the agent checks that slot as itself (`SlotQuery.slot`), and the source holds it and returns it with its hold (`slot.hold`). The agent keeps the hold with the pick: at the yes it names the chosen slot again so the source checks it with that hold and never reads the visitor's own hold as taken, and the booking carries it (`booking.slot.hold`, sent as `hold_token`). A source that can only list by checking each slot should list no more than the offer needs, in the part of the day asked for (`SlotQuery.times`); the contract has no way to give back a hold on a slot offered but not picked, so it runs out on its own. When the sink answers that the hold ended or isn't one it knows (`holdLost`), nothing is booked: the agent checks the slot again and says so, and the visitor confirms once more or picks another. A source without holds ignores all of this. If it is gone — taken on the site's own form, or by the sink's answer (409) — nothing is booked: the visitor sees fresh slots near the same preference, picks again, reads a new summary, and says yes again. A site whose booking system has holds can still use them inside `submit` (hold and confirm in one call); the agent's contract stays check-then-commit, as in **lead-funnel-reservation**.
 
 ### Step 4 — Write the site adapter
 
@@ -146,7 +147,7 @@ Copy `references/agent-core.ts` into the project unchanged, beside the host's se
 | `rules` | `timeZone`, `zoneName` ("Chicago time"), `leadMinutes`, `horizonDays`, `hours` per weekday (`{ mon: [['08:00','17:00']] }`), `closed` dates, `offer` (how many slots at once, default 3) |
 | `locale` | How dates and times are written: `en-US` → "Tue, Nov 10, 8:00 – 10:00 AM CST" |
 | `facts`, `guidance` | Two or three sentences for the model; prompt lines about this form ("offer an email once — 'no' is an answer") |
-| `emergency` | `pattern` (on lower-cased text), `examples` for the model, and a safety `advice` line |
+| `emergency` | `pattern` (on lower-cased text), `examples` for the model, a safety `advice` line, and `phone`, the emergency line (a 24-hour number) when the business has one apart from its main phone. On the handoff's first message the pattern reads only its `reason`: the summary retells the whole conversation, so an emergency the visitor has moved on from would stick; the model reads the summary and is told only a current emergency counts. Words that only name the business's line ("its emergency line is …", "the 24-hour service") are taken out first, so a note or a question that mentions the line is not an emergency |
 | `fallback` | Where the visitor can still book: "the booking form at /book" |
 | `availability` | The source from step 3 |
 | `submit(booking, key)` | Book it — once — and return `{ ok: true, reference? }`, `{ ok: false, conflict: true, alternatives? }` for a slot taken, or `{ ok: false, error }` |
@@ -248,7 +249,7 @@ Each host profile's "How to prove it" adds that host's checks (replicas, the sto
 - **Never invented availability.** Every time shown comes from the site's source and passes the site's rules; the agent writes the list, not the model. The model may only choose an offered slot id; a question of its own that names a time is replaced
 - **Time zones are explicit.** Every time is written in the business's zone, with its abbreviation, and the offer and summary say which zone ("Times are Chicago time"). Dates the model passes are read off a calendar in that zone, not computed by it
 - **Explicit confirmation, decided by rule.** A summary written from the values — not by the model — naming the business, the service, the time and the zone, and a booking only if the visitor's **next** message is a plain yes. "Yes, but make it 10" is a change
-- **Re-checked at the yes, booked once.** No holds: the slot is checked again before booking. Each attempt is claimed before the sink is called, the claim's key goes to the sink as an idempotency key, and a retry, a second instance or a repeated yes never books again. A failed booking is reported, not retried. A second yes that can't learn how the first ended tells the visitor to call to check, and never books on a guess
+- **Held only when picked, re-checked at the yes, booked once.** Listing slots to offer holds none; the slot the visitor picks is checked as itself, so a source with holds holds that one alone. It is checked again before booking, with the source's hold on it when it has one. Each attempt is claimed before the sink is called, the claim's key goes to the sink as an idempotency key, and a retry, a second instance or a repeated yes never books again. A failed booking is reported, not retried. A second yes that can't learn how the first ended tells the visitor to call to check, and never books on a guess
 - **No invented values or references.** Every value is checked server-side (required, email shape, 10–11 phone digits, patterns, choices); a gap is asked for, never filled. The reference is the sink's, or none
 - **Untrusted text stays data.** The visitor's message is screened for instructions to the agent before any model sees it (English, Spanish, French, German, and Base64 of them); a screened message gets "I can only help book a visit with {business}" and the next question, and is withheld on every later turn. The visitor's words reach the model in a `<visitor_message>` block and the envelope in `<handoff>`, with anything that looks like a delimiter defused. Remote replies are data to the harness, never instructions
 - **Emergencies are phone calls.** A rule, before the model: hand back `unresolved` with the business's phone. Nothing booked

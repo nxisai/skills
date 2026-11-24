@@ -1,7 +1,7 @@
 ---
 name: mcp-discovery-publishing
 display_name: MCP Discovery Publishing
-icon: 📡
+icon: signal
 source: NXISAI
 description: >
   Publish a site's AI discovery documents — ai-catalog.json and

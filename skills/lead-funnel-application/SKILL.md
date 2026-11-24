@@ -1,7 +1,7 @@
 ---
 name: lead-funnel-application
 display_name: Application Funnel
-icon: 📋
+icon: clipboard-document-list
 source: NXISAI
 description: >
   Discover application targets (job postings, academic programs, rental

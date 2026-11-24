@@ -1,7 +1,7 @@
 ---
 name: agent-model-proxy
 display_name: Agent Model Proxy
-icon: 🛰️
+icon: server-stack
 source: NXISAI
 description: >
   Run an on-page agent's model behind server code on the site's own host,

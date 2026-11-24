@@ -168,6 +168,8 @@ export interface QuoteSite {
     advice: string;
     /** Who to call when no provider is settled yet, after "please ". */
     noProvider: string;
+    /** The provider's emergency line (a 24-hour number), when it has one apart from its main phone. */
+    phone?: string;
   };
   /** Where the visitor can still send it themselves, as a phrase: "the quote form on their page". */
   fallback(provider: Provider | null): string;
@@ -207,7 +209,7 @@ export function systemPrompt(site: QuoteSite, provider: Provider, fields: QuoteF
       longtext.length ? ` For ${longtext.join(' and ')}, write what the visitor told you about the job in their words; do not embellish.` : ''
     }`,
     `Never invent a value the visitor did not give. Never quote a price or promise a time — the ${site.providerNoun} does that.`,
-    `If anything is an emergency — ${site.emergency.examples} — do not take a request: hand_back with outcome unresolved and tell them to call ${provider.name} at ${provider.phone} now.`,
+    `Only what the visitor needs now counts as an emergency: something earlier in the conversation that they have moved on from is not one. If something is an emergency now — ${site.emergency.examples} — do not take a request: hand_back with outcome unresolved and tell them to ${emergencyCall(site, provider)}.`,
     'If they want something other than a quote, hand_back with outcome transferred.',
   ].join(' ');
 }
@@ -310,6 +312,32 @@ function readable(message: Message): string {
 }
 
 const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/**
+ * What the emergency rule reads of a message: the visitor's words, or for the handoff only its reason. The summary
+ * tells the whole conversation, so an emergency earlier in it that the visitor has moved on from would stick; the
+ * model reads the summary and judges whether one is still going on.
+ */
+function urgentText(message: Message | undefined): string {
+  if (!message) return '';
+  const envelope = findExtension(message.parts, 'envelope');
+  return withoutTheLine(envelope ? String(envelope.reason ?? '') : textOf(message.parts));
+}
+
+/**
+ * Words that only name the business's line or service for emergencies ("its emergency line is …", "the 24-hour
+ * service"): a note or a question that mentions them is not an emergency. Taken out before the emergency rule reads
+ * a message, so only what is happening to the visitor counts.
+ */
+const THE_LINE = /\b(?:emergency|24[\s/-]*(?:hours?|hrs?|7))[\s-]+(?:line|number|phone|service|dispatch|contact)s?\b/gi;
+export const withoutTheLine = (text: string): string => text.replace(THE_LINE, ' ');
+
+/** "Copperline's", "Copperline Home Services'": a name's possessive. */
+export const possessive = (name: string): string => (/s$/i.test(name.trim()) ? `${name}'` : `${name}'s`);
+
+/** "call <provider>'s emergency line at <number>", or its main phone when it has none. */
+const emergencyCall = (site: Pick<QuoteSite, 'emergency'>, provider: Provider) =>
+  site.emergency.phone ? `call ${possessive(provider.name)} emergency line now at ${site.emergency.phone}` : `call ${provider.name} now at ${provider.phone}`;
 
 // ── What a task has settled ─────────────────────────────────────────────────
 
@@ -487,8 +515,8 @@ export class QuoteExecutor implements AgentExecutor {
     const provider = progress.provider;
 
     // An emergency is a phone call, not a quote.
-    if (site.emergency.pattern.test(lastText.toLowerCase())) {
-      const call = provider ? `call ${provider.name} now at ${provider.phone}` : site.emergency.noProvider;
+    if (site.emergency.pattern.test(urgentText(last).toLowerCase())) {
+      const call = provider ? emergencyCall(site, provider) : site.emergency.noProvider;
       return handBack(
         `That sounds like an emergency — please ${call} rather than waiting on a quote.${site.emergency.advice ? ` ${site.emergency.advice}` : ''}`,
         'unresolved',
@@ -545,9 +573,9 @@ export class QuoteExecutor implements AgentExecutor {
     const urgent = Object.entries(site.emergency.values ?? {}).some(([name, means]) => values[name] !== undefined && means.includes(values[name]));
     if (urgent) {
       return handBack(
-        `For something that needs doing right now, please call ${provider.name} at ${provider.phone} — that's faster than a quote.`,
+        `For something that needs doing right now, please ${emergencyCall(site, provider)} — that's faster than a quote.`,
         'unresolved',
-        `The visitor needs help right now; told them to call ${provider.name} at ${provider.phone}. No quote request was sent.`,
+        `The visitor needs help right now; told them to ${emergencyCall(site, provider)}. No quote request was sent.`,
       );
     }
     const gap = missing(fields, values);

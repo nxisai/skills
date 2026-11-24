@@ -44,6 +44,7 @@ import {
   slotLabel,
   zonedInstant,
   type Availability,
+  type SlotQuery,
   type BookingDecision,
   type BookingModel,
   type BookingSite,
@@ -360,7 +361,7 @@ describe('hand off to the Booking Agent', () => {
     const { model, seen } = scripted([]);
     useBookingAgent({ model });
     const { controller, reply, handedBack } = controllerFor();
-    await controller.start('conv-1', 'booking', envelope('Basement', 'Water is pouring in through the basement wall; wants someone today.'));
+    await controller.start('conv-1', 'booking', envelope('Water is pouring in through the basement wall', 'Water is pouring in through the basement wall; wants someone today.'));
     await handedBack();
     expect(await reply(0)).toContain('(773) 555-0142');
     expect(controller.session('conv-1')!.handBack).toEqual(expect.objectContaining({ outcome: 'unresolved', references: [] }));
@@ -579,6 +580,53 @@ describe('a second yes on the same task', () => {
     const retry = await sink(b, 'task-9.0');
     expect(first).toEqual(retry);
     expect(await sink(b, 'task-10.0')).toEqual({ ok: false, conflict: true });
+  });
+});
+
+describe('holds', () => {
+  /** A source whose check of one slot holds it, as action-binding's reference receiver does: listing holds nothing. */
+  function holding() {
+    const queries: SlotQuery[] = [];
+    const source: Availability = {
+      async slots(q) {
+        queries.push(q);
+        const free = await cal.slots(q);
+        if (!q.slot) return free;
+        return free.filter((s) => s.id === q.slot!.id).map((s) => ({ ...s, hold: { token: q.slot!.hold?.token ?? `held-${s.id}`, expires_at: '2026-11-09T16:10:00Z' } }));
+      },
+    };
+    return { queries, source };
+  }
+
+  it('lists times without holding any, holds the one picked, and books with its hold', async () => {
+    const { queries, source } = holding();
+    const s = scripted([{ action: 'details', values: { ...tomorrowMorning, ...pat } }]);
+    const c = conversation(new BookingExecutor(site({ availability: source }), () => s.model, memoryProgress(), { now: () => MONDAY_10AM }));
+    expect(textOf(await c.first())).toContain('2. Tue, Nov 10, 10:00 AM – 12:00 PM CST');
+    // Listing names no slot: nothing held. The morning asked for goes with the query.
+    expect(queries.every((q) => !q.slot)).toBe(true);
+    expect(queries[0].times).toEqual(['00:00', '12:00']);
+    const listed = queries.length;
+    // The pick is checked as itself: the one slot a holding source holds.
+    expect(textOf(await c.say('2'))).toMatch(/Shall I book it\?/);
+    expect(queries.slice(listed).map((q) => q.slot?.id)).toEqual([TUE_10.id]);
+    await c.say('yes');
+    // At the yes, the same slot with its hold; the booking carries it.
+    expect(queries.at(-1)!.slot).toMatchObject({ id: TUE_10.id, hold: { token: `held-${TUE_10.id}` } });
+    expect(posts).toHaveLength(1);
+    expect(posts[0].body.hold_token).toBe(`held-${TUE_10.id}`);
+  });
+
+  it('a pick taken since the offer is said at once, and what is free now offered', async () => {
+    const { source } = holding();
+    const s = scripted([{ action: 'details', values: { ...tomorrowMorning, ...pat } }]);
+    const c = conversation(new BookingExecutor(site({ availability: source }), () => s.model, memoryProgress(), { now: () => MONDAY_10AM }));
+    await c.first();
+    cal.block(TUE_8.id);
+    const again = textOf(await c.say('1'));
+    expect(again).toMatch(/^Sorry — that time was just taken\. Here's what's free now:/);
+    expect(again).not.toContain('8:00 – 10:00 AM');
+    expect(posts).toHaveLength(0);
   });
 });
 

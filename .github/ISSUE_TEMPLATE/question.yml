@@ -1,0 +1,30 @@
+name: Question or unclear instructions
+description: A skill is confusing, undocumented, or does not work the way you expected.
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Questions are welcome here. If a skill left you or your agent guessing, that is worth
+        reporting even if nothing is technically broken — unclear instructions are bugs in our
+        writing.
+
+  - type: textarea
+    id: question
+    attributes:
+      label: What are you trying to do
+      description: What you were attempting, which skill, and where it stopped making sense.
+      placeholder: |
+        I wanted my booking form's requests to reach my own backend, but I could not tell from
+        action-binding which file the signing secret goes in.
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: What you tried
+      description: Commands, output, or the part of the skill you were reading. Optional.
+      render: shell
+    validations:
+      required: false

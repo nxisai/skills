@@ -1,7 +1,7 @@
 ---
 name: lead-funnel-quote
 display_name: Quote Request Funnel
-icon: 📨
+icon: paper-airplane
 source: NXISAI
 description: >
   Discover service providers (contractors, attorneys, clinics, agencies,

@@ -248,7 +248,7 @@ describe('hand off to the Quote Agent', () => {
     const { model, seen } = scripted([]);
     useQuoteAgent({ model, site: site() });
     const { controller, until, reply } = controllerFor();
-    await controller.start('conv-1', 'quote', envelope(HOME, 'Storm damage', 'Water is pouring in through the ceiling after the storm; wants a quote.'));
+    await controller.start('conv-1', 'quote', envelope(HOME, 'Water is pouring in through the ceiling after the storm', 'Water is pouring in through the ceiling after the storm; wants a quote.'));
     await until('the hand-back', () => controller.session('conv-1')?.state === 'handed-back');
     expect(await reply(0)).toContain('(303) 555-0142');
     expect(controller.session('conv-1')!.handBack).toEqual(expect.objectContaining({ outcome: 'unresolved', references: [] }));

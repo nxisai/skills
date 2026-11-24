@@ -1,7 +1,7 @@
 ---
 name: quote-agent
 display_name: Quote Agent
-icon: 🧾
+icon: document-currency-dollar
 source: NXISAI
 description: >
   Give a site that runs @nxisai/agent-harness a conversational Quote Agent
@@ -23,7 +23,7 @@ compatibility: >
   Other hosts: asks five questions.
 metadata:
   author: nxisai
-  version: 1.0
+  version: 1.2
   type_group: _integration
   harness_min: 0.12.0
   submit_policy: LEAD_GEN
@@ -125,7 +125,7 @@ Copy `references/agent-core.ts` into the project unchanged, beside the host's se
 | `fields(provider)` | The spec, as `QuoteField[]`, with per-business options expanded |
 | `facts(provider)` | Two or three sentences for the model: what the business is, what it offers, where, its phone |
 | `guidance` | Prompt lines about this form's fields: what to ask about if unclear, what's optional ("offer a phone number once — 'no' is an answer") |
-| `emergency` | `pattern` (on lower-cased text), `examples` for the model, `values` that mean "right now" (`{ timeline: ['emergency'] }`), a safety `advice` line, and `noProvider` — who to call when no business is settled yet |
+| `emergency` | `pattern` (on lower-cased text), `examples` for the model, `values` that mean "right now" (`{ timeline: ['emergency'] }`), a safety `advice` line, `noProvider` — who to call when no business is settled yet, and `phone`, the emergency line (a 24-hour number) when the business has one apart from its main phone. On the handoff's first message the pattern reads only its `reason`: the summary retells the whole conversation, so an emergency the visitor has moved on from would stick; the model reads the summary and is told only a current emergency counts. Words that only name the business's line ("its emergency line is …", "the 24-hour service") are taken out first, so a note or a question that mentions the line is not an emergency |
 | `fallback(provider)` | Where the visitor can still send it themselves: "the quote form on their page" |
 | `submit(provider, values)` | Send it — once — and return `{ ok, reference? }` |
 
