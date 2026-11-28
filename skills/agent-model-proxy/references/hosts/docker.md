@@ -143,11 +143,13 @@ Two things the adapter has to carry across, or the guardrails quietly lose half 
 
 Answer `GET` on the agent path before the Origin check and the rate limit: the copy isn't secret, and `answerTurn` serves it.
 
+A container that calls `answerTurn` passes the guardrails from `makeGuardrails` below, always: with no policy file they run the built-in defaults. The `server.mjs` of section 1, which doesn't use the core, has none of these; its limiter and caps are all that stand in front of the model, so a container serving a live site should use the core.
+
 **Where the policy lives:** a file in a directory mounted read-only (`./policy:/run/config:ro`, with the policy at `./policy/guardrails.json`). It is read on each request, so editing it on the host applies to the next one, with no restart and no rebuild.
 
 Mount the **directory**, not the file. Most editors, and `sed -i`, save by writing a new file and renaming it over the old one. A single-file bind mount keeps the old inode, so after the first such save the file is gone inside the container, the source reads no policy, and every request runs with no guardrails at all. This was measured: after one `sed -i` save, `/run/config/guardrails.json` no longer existed in the container and an over-length message reached the model.
 
-Even with the directory mounted, a rename-style save can leave a moment when the file reads as missing inside the container. In 60 saves, each followed at once by an over-length request, the read failed with `ENOENT` 5 times. A source that answers a missing file with "no policy" turns every guardrail off for those requests. So the file source never does: a failed read returns the last policy it read, and with none yet it throws, which makes the built-in defaults apply. The endpoint has no policy only when no file is configured at all.
+Even with the directory mounted, a rename-style save can leave a moment when the file reads as missing inside the container. In 60 saves, each followed at once by an over-length request, the read failed with `ENOENT` 5 times. A source that answers a missing file with "no policy" turns every guardrail off for those requests. So the file source never does: a failed read returns the last policy it read, and with none yet it throws, which makes the built-in defaults apply. With no file configured at all there is no policy, and the built-in defaults apply.
 
 ```ts
 import { readFile } from "node:fs/promises";
@@ -182,7 +184,7 @@ const redisStore = (redis: {
   set: async (key, counts, ttlMs) => void (await redis.set(`gr:${key}`, JSON.stringify(counts), { PX: ttlMs })),
 });
 
-/** With AGENT_GUARDRAILS_FILE unset there is no policy, and the endpoint runs as it did before guardrails. */
+/** With AGENT_GUARDRAILS_FILE unset there is no policy, and the built-in defaults apply. */
 export const makeGuardrails = (redis: Parameters<typeof redisStore>[0]) =>
   proxyGuardrails({
     sources: process.env.AGENT_GUARDRAILS_FILE ? [fileSource(process.env.AGENT_GUARDRAILS_FILE)] : [],

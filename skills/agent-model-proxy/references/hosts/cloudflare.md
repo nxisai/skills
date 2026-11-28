@@ -15,9 +15,11 @@ Two shapes, depending on how the site is deployed:
 // Workers with static assets: src/worker.ts
 import Anthropic from "@anthropic-ai/sdk";
 import { answerTurn } from "./agent-core";
+import { proxyGuardrails, type ProxyGuardrails } from "./agent-guardrails";
 
 interface Env {
   ANTHROPIC_API_KEY: string;
+  AGENT_CONVERSATION_SECRET?: string;
   AGENT_LIMITER: { limit(opts: { key: string }): Promise<{ success: boolean }> };
   ASSETS: { fetch(req: Request): Promise<Response> };
 }
@@ -25,24 +27,33 @@ interface Env {
 /** Full origins, as browsers send them. Every one's host must be in the site tag token. */
 const ALLOWED_ORIGINS = ["https://example.com", "http://localhost:8787"];
 
+// Built from the first request's env, once per isolate. With no policy source, the built-in defaults.
+let guardrails: ProxyGuardrails | undefined;
+
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
     const url = new URL(req.url);
     if (url.pathname !== "/api/agent") return env.ASSETS.fetch(req);
-    if (req.method !== "POST") return new Response(null, { status: 405 });
+    // GET serves the policy copy the page reads (guardrails-src="/api/agent").
+    if (req.method !== "POST" && req.method !== "GET") return new Response(null, { status: 405 });
 
     // Per client, before any work. The binding counts per location, not globally.
     const key = req.headers.get("cf-connecting-ip") ?? "unknown";
     const { success } = await env.AGENT_LIMITER.limit({ key });
     if (!success) return Response.json({ error: "Too many requests." }, { status: 429 });
 
+    guardrails ??= proxyGuardrails({ sources: [], secret: env.AGENT_CONVERSATION_SECRET });
     return answerTurn(req, {
       anthropic: new Anthropic({ apiKey: env.ANTHROPIC_API_KEY }),
       allowedOrigins: ALLOWED_ORIGINS,
+      guardrails,
+      client: key,
     });
   },
 };
 ```
+
+`agent-guardrails.ts` goes beside `agent-core.ts`; Guardrails at the proxy, below, adds a KV namespace as the policy's source.
 
 Locally, `wrangler dev` serves a Worker on **`http://localhost:8787`**; `wrangler pages dev` serves Pages on **`http://localhost:8788`**. Whichever the project uses goes in `ALLOWED_ORIGINS`; the site tag token covers it with `localhost`, since it ignores ports.
 
@@ -76,6 +87,8 @@ The burst from step 6: `limit + 1` empty POSTs from an allowed Origin inside the
 ## Guardrails at the proxy
 
 **Status: draft**, like the rest of this profile. The core is verified by the skill's scripted tests; the adapter below type-checks, and nothing here has run on Workers.
+
+The adapter in section 1 already builds the guardrails, so with no policy they run the built-in defaults. This adds a policy the site can change.
 
 **Where the policy lives:** a **KV namespace**, key `policy`: `wrangler kv key put --binding AGENT_GUARDRAILS policy --path guardrails.json` changes it with no deploy. **Unconfirmed:** KV is eventually consistent, documented as up to about a minute across locations, so "the next request" is the next one after the change has propagated; the exact command flags against the current Wrangler.
 

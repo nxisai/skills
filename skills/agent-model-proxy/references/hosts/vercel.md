@@ -16,15 +16,29 @@ It depends on the framework:
 // app/api/agent/route.ts  (Next.js)  — or api/agent.ts elsewhere
 import Anthropic from "@anthropic-ai/sdk";
 import { answerTurn } from "@/lib/agent-core";
+import { envSource, proxyGuardrails } from "@/lib/agent-guardrails";
 
 /** Full origins, as browsers send them. Every one's host must be in the site tag token. */
 const ALLOWED_ORIGINS = ["https://example.com", "http://localhost:3000"];
 
-export async function POST(req: Request) {
+// The guardrails, at module scope so counts outlive a request. With no policy, the built-in defaults.
+const guardrails = proxyGuardrails({ sources: [envSource("AGENT_GUARDRAILS")], secret: process.env.AGENT_CONVERSATION_SECRET });
+
+const handle = (req: Request) =>
   // The key is a server-only environment variable, set as Sensitive.
-  return answerTurn(req, { anthropic: new Anthropic(), allowedOrigins: ALLOWED_ORIGINS });
-}
+  answerTurn(req, {
+    anthropic: new Anthropic(),
+    allowedOrigins: ALLOWED_ORIGINS,
+    guardrails,
+    client: req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown",
+  });
+
+// GET serves the policy copy the page reads (guardrails-src="/api/agent").
+export const GET = handle;
+export const POST = handle;
 ```
+
+`agent-guardrails.ts` goes beside `agent-core.ts`; Guardrails at the proxy, below, adds Edge Config as the policy's source and says where the client IP comes from.
 
 Locally, `next dev` serves Route Handlers on **`http://localhost:3000`**, and `vercel dev` serves root `api/` functions, also on 3000 by default. The page and the endpoint share that origin, which goes in `ALLOWED_ORIGINS`; the token's `localhost` covers it.
 
@@ -47,6 +61,8 @@ The burst from step 6: `windowLimit + 1` empty POSTs from an allowed Origin insi
 ## Guardrails at the proxy
 
 **Status: draft**, like the rest of this profile. The core is verified by the skill's scripted tests; the adapter below type-checks against `@vercel/edge-config`, and nothing here has run on Vercel.
+
+The adapter in section 1 already builds the guardrails, so with no policy they run the built-in defaults. This adds a policy the site can change.
 
 **Where the policy lives:** Vercel **Edge Config**, item `agentGuardrails` (the document as a JSON value). Edge Config is read at request time and changes with no deploy, from the dashboard or the API. `AGENT_GUARDRAILS` (an environment variable) is the fallback; a changed variable reaches functions only on the next deploy. **Unconfirmed:** Edge Config's propagation delay after a write (documented as seconds), which is how long "the next request" really is here.
 

@@ -12,7 +12,7 @@ Netlify Functions, in `netlify/functions/`. Every file directly in that director
 netlify/functions/agent/
   agent.mts        ← the adapter; the entry file is named after the directory
   agent-core.ts    ← references/agent-core.ts, unchanged
-  agent-guardrails.ts ← references/agent-guardrails.ts, when the site uses guardrails at the proxy
+  agent-guardrails.ts ← references/agent-guardrails.ts, unchanged
 ```
 
 This works for static sites and static exports alike: the functions deploy beside the publish directory in `netlify.toml`.
@@ -33,9 +33,10 @@ The gateway serves its own list of models. If it does not yet serve the core's d
 
 ```ts
 // netlify/functions/agent/agent.mts
-import type { Config } from "@netlify/functions";
+import type { Config, Context } from "@netlify/functions";
 import Anthropic from "@anthropic-ai/sdk";
 import { answerTurn } from "./agent-core";
+import { envSource, proxyGuardrails } from "./agent-guardrails";
 
 /** Full origins, as browsers send them. Every one's host must be in the site tag token. */
 const ALLOWED_ORIGINS = [
@@ -44,13 +45,21 @@ const ALLOWED_ORIGINS = [
   "http://localhost:8888",
 ];
 
-export default (req: Request) =>
+// The guardrails, at module scope so counts outlive a request. With no policy, the built-in defaults.
+// Guardrails at the proxy, below, adds Netlify Blobs as the policy's source.
+const guardrails = proxyGuardrails({
+  sources: [envSource("AGENT_GUARDRAILS")],
+  secret: process.env.AGENT_CONVERSATION_SECRET,
+});
+
+export default (req: Request, context: Context) =>
   // AI Gateway injects the credentials at init; no key is set in this project.
-  answerTurn(req, { anthropic: new Anthropic(), allowedOrigins: ALLOWED_ORIGINS });
+  answerTurn(req, { anthropic: new Anthropic(), allowedOrigins: ALLOWED_ORIGINS, guardrails, client: context.ip });
 
 export const config: Config = {
   path: "/api/agent",
-  method: ["POST"],
+  // GET serves the policy copy the page reads (guardrails-src="/api/agent").
+  method: ["GET", "POST"],
   // Per client, enforced at the edge. aggregateBy must list both keys: the
   // types accept "ip" alone, and the platform then rejects the rule at deploy
   // and ignores every rate-limit rule on the site.
@@ -77,6 +86,8 @@ Two checks, both needed:
 ## Guardrails at the proxy
 
 **Status: the core is verified with the skill's scripted tests** (`agent-guardrails.test.ts`, a scripted model, a policy source changed between requests). The adapter below type-checks against `@netlify/functions` and `@netlify/blobs`, but is not yet confirmed on a live deploy: the Blobs CLI commands, and a change applying on the next request, are to check on the first site that uses it.
+
+The adapter in section 3 already builds the guardrails, so with no policy they run the built-in defaults. This adds a policy the site can change.
 
 **Where the policy lives:** Netlify Blobs, store `agent-guardrails`, key `policy`. A function reads it on each request, so a change applies to the next one with no deploy. `AGENT_GUARDRAILS` (an environment variable) is the fallback; Netlify applies a changed variable to functions only on the next deploy.
 

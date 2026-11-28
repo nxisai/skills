@@ -102,21 +102,104 @@ const refusalOf = async (res: Response) => ((await res.clone().json()) as { refu
 beforeEach(() => {
   vi.spyOn(console, "warn").mockImplementation(() => {});
   vi.spyOn(console, "error").mockImplementation(() => {});
+  vi.spyOn(console, "info").mockImplementation(() => {});
 });
 afterEach(() => vi.restoreAllMocks());
 
-describe("with no policy configured", () => {
-  it("behaves exactly as before guardrails", async () => {
-    const before = scripted();
-    const after = endpoint(null);
-    const requests = () => [post(visitor("hi")), post({}), new Request("https://example.com/api/agent", { method: "GET" }), post(visitor("x".repeat(9000)))];
-    const a = requests().map((r) => answerTurn(r, { anthropic: before.client, allowedOrigins: [ORIGIN] }));
-    const b = requests().map((r) => after.call(r));
-    for (let i = 0; i < a.length; i++) {
-      const [x, y] = [await a[i], await b[i]];
-      expect([y.status, await y.text(), [...y.headers.keys()].filter((k) => k.startsWith("nxis"))]).toEqual([x.status, await x.text(), []]);
+describe("with no policy configured: the built-in defaults", () => {
+  it.each([
+    ["a source with no policy", () => endpoint(null, { secret: SECRET })],
+    ["no sources at all", () => {
+      const e = endpoint(null, { secret: SECRET });
+      const guardrails = proxyGuardrails({ sources: [], secret: SECRET });
+      return { ...e, call: (req: Request) => answerTurn(req, { anthropic: e.model.client, allowedOrigins: [ORIGIN], guardrails, client: "203.0.113.7" }) };
+    }],
+  ])("%s: over-length and over-rate are refused, before the model", async (_n, make) => {
+    const e = make();
+    const long = await e.call(post(visitor("x".repeat(4001))));
+    expect(long.status).toBe(413);
+    expect(await refusalOf(long)).toEqual({ stage: "input", rule: "input/length", action: "block", severity: "warning" });
+    expect(long.headers.get("nxis-guardrail")).toBe("input/length");
+    let token: string | null = null;
+    const statuses: number[] = [];
+    for (let i = 0; i < 11; i++) {
+      const res = await e.call(post(visitor(`hi ${i}`), token ? { "nxis-conversation": token } : {}));
+      token ??= res.headers.get("nxis-conversation");
+      statuses.push(res.status);
     }
-    expect(after.model.asked).toEqual(before.asked);
+    // The standard preset's 10 sends a minute.
+    expect(statuses).toEqual([...Array(10).fill(200), 429]);
+    expect(await refusalOf(await e.call(post(visitor("again"), { "nxis-conversation": token! })))).toMatchObject({ rule: "input/rate" });
+    expect(e.model.asked).toHaveLength(10);
+  });
+
+  it("a reply that calls a tool the request didn't declare is refused, and the reply is screened", async () => {
+    const e = endpoint(null);
+    e.model.script([{ call: { name: "delete_account", input: {} } }]);
+    expect(await refusalOf(await e.call(post(visitor("go"))))).toMatchObject({ rule: "tool/policy" });
+    e.model.script([{ text: "The key is sk-ant-api03-AbCdEfGhIjKlMnOpQrStUvWxYz0123456789" }]);
+    expect(await refusalOf(await e.call(post(visitor("the key?"))))).toMatchObject({ rule: "output/secret" });
+  });
+
+  it("ordinary traffic goes through: a long message, any declared tool, a tool loop, the page's prompt", async () => {
+    const e = endpoint(null, { secret: SECRET });
+    const first = await e.call(post({ ...visitor("x".repeat(4000)), tools: [{ name: "book_table" }, { name: "search_menu" }] }));
+    expect(first.status).toBe(200);
+    expect(first.headers.get("nxis-guardrails-version")).toBe("defaults");
+    const h = { "nxis-conversation": first.headers.get("nxis-conversation")! };
+    const steps: number[] = [];
+    for (let i = 0; i < 7; i++) steps.push((await e.call(post(toolResult(), h))).status);
+    expect(steps).toEqual(Array(7).fill(200));
+    expect(e.model.asked[0].system.startsWith("Page prompt.")).toBe(true);
+    expect(e.model.asked[0].max_tokens).toBe(1024);
+  });
+
+  it("serves the defaults' copy on GET, and says once that the defaults are in force", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    const e = endpoint(null);
+    const res = await e.call(new Request("https://example.com/api/agent", { method: "GET" }));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ schema: 1, version: "defaults" });
+    await e.call(post(visitor("hi")));
+    await e.call(post(visitor("hi")));
+    expect(info.mock.calls.filter(([m]) => String(m).includes("built-in defaults"))).toHaveLength(1);
+  });
+
+  it("a missing guardrails argument is a type error", () => {
+    const model = scripted();
+    // @ts-expect-error -- the guardrails, or `guardrails: false`; never neither.
+    const missing = () => answerTurn(post(visitor("hi")), { anthropic: model.client, allowedOrigins: [ORIGIN] });
+    // @ts-expect-error -- with the guardrails, the client's IP too.
+    const noClient = () => answerTurn(post(visitor("hi")), { anthropic: model.client, allowedOrigins: [ORIGIN], guardrails: endpoint(null).guardrails });
+    expect([typeof missing, typeof noClient]).toEqual(["function", "function"]);
+  });
+});
+
+describe("with the explicit opt-out (guardrails: false)", () => {
+  it("enforces nothing at the proxy beyond the endpoint's caps, logs it once, and marks every response", async () => {
+    vi.resetModules();
+    const { answerTurn: fresh } = await import("./agent-core");
+    const warn = vi.mocked(console.warn);
+    const model = scripted();
+    const call = (req: Request) => fresh(req, { anthropic: model.client, allowedOrigins: [ORIGIN], guardrails: false });
+    const statuses: number[] = [];
+    for (let i = 0; i < 20; i++) statuses.push((await call(post(visitor("x".repeat(5000))))).status);
+    expect(statuses).toEqual(Array(20).fill(200));
+    // Not streamed, not screened: no canary in the prompt, the page's prompt as it came.
+    expect(model.client.messages.stream).not.toHaveBeenCalled();
+    expect(model.asked[0].system).toBe("Page prompt.");
+    model.script([{ call: { name: "delete_account", input: {} } }]);
+    const res = await call(post(visitor("go")));
+    expect(res.status).toBe(200);
+    expect(res.headers.get("nxis-guardrails")).toBe("off");
+    // The endpoint's own caps still hold, and are marked too.
+    const capped = await call(post(visitor("x".repeat(9000))));
+    expect(capped.status).toBe(413);
+    expect(await refusalOf(capped)).toBeUndefined();
+    expect(capped.headers.get("nxis-guardrails")).toBe("off");
+    const get = await call(new Request("https://example.com/api/agent", { method: "GET" }));
+    expect(get.headers.get("nxis-guardrails")).toBe("off");
+    expect(warn.mock.calls.filter(([m]) => String(m).includes("guardrails are off"))).toHaveLength(1);
   });
 });
 

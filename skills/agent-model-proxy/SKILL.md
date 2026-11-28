@@ -61,7 +61,7 @@ It reads back:
 }
 ```
 
-A non-2xx response with `{ error }` is shown to the visitor as the agent's failure line. With guardrails at the proxy, a refusal also carries `refusal: { stage, rule, action, severity }`, which the harness (0.14.0 and later) shows with the same message and `nxis-guardrail` event as its own decision; see [Guardrails at the proxy](#guardrails-at-the-proxy-optional). Five rules, none of which anything enforces for you:
+A non-2xx response with `{ error }` is shown to the visitor as the agent's failure line. A refusal from the guardrails at the proxy also carries `refusal: { stage, rule, action, severity }`, which the harness (0.14.0 and later) shows with the same message and `nxis-guardrail` event as its own decision; see [Guardrails at the proxy](#guardrails-at-the-proxy). Five rules, none of which anything enforces for you:
 
 - **`text` is rendered verbatim.** Strip anything that is not for a person to read
 - **At most one `call` per turn.** The harness runs one tool a turn; the client takes the first and warns about the rest
@@ -104,9 +104,9 @@ Consent to an agent on the page is not consent to this. Ask for it here.
 
 ### Step 3 — Write the endpoint
 
-Two files: a host-neutral core, and an adapter from the host profile that calls it. The core is standard `Request` in, `Response` out, which every host in the profiles runs.
+Three files: a host-neutral core, the guardrails beside it, and an adapter from the host profile that calls them. The core is standard `Request` in, `Response` out, which every host in the profiles runs.
 
-The core is [`references/agent-core.ts`](references/agent-core.ts): copy it into the project unchanged. It checks the Origin, the body size, the message count and length, and the token ceiling (`LIMITS`), maps the request to the model's API, honors the abort, and answers in the contract's shape. Logged upstream errors are never returned. With guardrails (below) it also takes `guardrails` and `client`; without them it behaves exactly as it always has.
+The core is [`references/agent-core.ts`](references/agent-core.ts): copy it into the project unchanged. It checks the Origin, the body size, the message count and length, and the token ceiling (`LIMITS`), maps the request to the model's API, honors the abort, and answers in the contract's shape. Logged upstream errors are never returned. It also takes the guardrails, built from [`references/agent-guardrails.ts`](references/agent-guardrails.ts), and the client's IP as the host knows it (see [Guardrails at the proxy](#guardrails-at-the-proxy)). They are not optional: leaving them out is a type error, and `guardrails: false` is the explicit opt-out.
 
 The endpoint's path is the one the page will use — `/api/agent` unless the project already has a convention. It must be on the site's own origin: same origin is what lets the Origin check mean something, and it is where `createProxyProvider` is pointed. On Docker, that means the site's reverse proxy routes the path to the container. Where it can't, the profile describes the alternative: the container on its own origin, answering CORS, with the Origin allowlist as the boundary.
 
@@ -114,7 +114,7 @@ The endpoint's path is the one the page will use — `/api/agent` unless the pro
 
 **The model** is the one constant. Use the current default unless the host's gateway does not serve it, in which case the newest one it does.
 
-Add `@anthropic-ai/sdk` to the project's dependencies if it is not there.
+Add `@anthropic-ai/sdk` and `@nxisai/agent-harness` (0.14.0 or later) to the project's dependencies if they are not there. The guardrails read their floors from the harness.
 
 ### Step 4 — Defend it, cheapest refusal first
 
@@ -122,7 +122,7 @@ Four layers, in this order, because each one is cheaper to pass through than the
 
 1. **Origin allowlist** — in the core. List full origins, scheme and port included, exactly as a browser sends them in the `Origin` header: the production origin, and each local origin the site is run on. This is stricter than the site tag token, which lists bare hosts and ignores ports — so the rule is that **every origin here has a host the token allows**. A mismatch means one half of the agent works in a place where the other does not
 2. **Rate limit per client** — the host's own primitive, from the profile. Twenty requests a minute per client allows a long conversation and refuses a script. Where the host enforces it before the code runs, a refused request never reaches the model at all
-3. **Hard caps** — in the core. Body size, message count, message length and `max_tokens` are the endpoint's ceilings, not the caller's requests
+3. **Hard caps and the guardrails** — in the core. Body size, message count, message length and `max_tokens` are the endpoint's ceilings, not the caller's requests. Then the guardrails: the built-in defaults with no policy, or the site's policy, which can only tighten them
 4. **A spending ceiling** — on the account, from step 2. It holds when the other three are misconfigured
 
 Log upstream errors; never return them. A provider's error message can carry detail the visitor has no business seeing.
@@ -151,13 +151,39 @@ Tell the user to deploy. Once it is live, repeat the Origin checks from step 5 a
 
 A 400 on every request, with no 429, means the limit is not active. Stop and fix it before the site is announced — the endpoint is public and metered, and this is what stands in front of the meter.
 
-## Guardrails at the proxy (optional)
+## Guardrails at the proxy
 
-The page's guardrails run in the visitor's browser, and a visitor who controls their browser can skip them. This endpoint is the one point on the agent's path the site controls and the visitor does not. With a **guardrails policy** configured, it enforces the guardrails too, on every request, and the site can change them without a deploy. With none configured, nothing here runs and the endpoint behaves exactly as before.
+The page's guardrails run in the visitor's browser, and a visitor who controls their browser can skip them. This endpoint is the one point on the agent's path the site controls and the visitor does not, so it enforces the guardrails too, on every request. **With no policy configured, the built-in defaults run**: the same floors the page's own guardrails use by default, so a page that never changed them sees no difference. A **guardrails policy** tightens them, and the site can change it without a deploy.
 
-Offer this when the site cares that a script can't run up its bill or drive its tools past its rules, which is most sites with a remote model. It needs `@nxisai/agent-harness` 0.14.0 or later installed for the server code too (`npm i @nxisai/agent-harness`): the policy and its floors come from the harness, so the page and the proxy read the same document the same way.
+It needs `@nxisai/agent-harness` 0.14.0 or later installed for the server code too (`npm i @nxisai/agent-harness`): the policy and its floors come from the harness, so the page and the proxy read the same document the same way.
 
 **On-device models have no proxy**, so none of this applies to them. Say so if the site runs one.
+
+### The defaults, with no policy
+
+| Rule | Default |
+|---|---|
+| Input length | 4,000 characters in the newest message's own words (the core's own cap is 8,000 in any message) |
+| Send rate | 10 a minute per conversation; 50 a minute per IP and origin. Without a conversation secret, 10 a minute per IP and origin |
+| Per turn | 8 generations and 16,000 output tokens |
+| Per conversation | 200 generations and 200,000 output tokens (a conversation id lasts an hour) |
+| Tools | Any tool the request declares; a reply may only call one it declared |
+| The reply | Screened on the stream for the proxy's canary and for secrets |
+
+These match the harness's standard preset, which the page enforces in the browser unless it was configured otherwise. A page set **looser** than the preset (a longer `input.maxLength`, say) now meets the preset at the proxy, and the only way past it is the opt-out: a policy can't loosen a floor. Say so if the page's configuration does that.
+
+### The opt-out, and when it is right
+
+Pass `guardrails: false` to `answerTurn`, explicitly:
+
+```ts
+// No guardrails at the proxy: only LIMITS, the Origin check and the host's rate limit stand in front of the model.
+answerTurn(req, { anthropic, allowedOrigins: ALLOWED_ORIGINS, guardrails: false });
+```
+
+It is in `agent-core.ts`, which doesn't import the harness, so a project that opts out needs neither `agent-guardrails.ts` nor the harness on the server. It is logged once per instance (`[agent] guardrails are off`), and every response carries `Nxis-Guardrails: off`, so a request with `curl` shows it.
+
+Offer it only when the server can't run the guardrails: a server that can't install `@nxisai/agent-harness` 0.14.0 or later, or a runtime it doesn't bundle for. Say what is lost (everything in the table below), and recommend the host's rate limit and a spending ceiling all the more. A visitor who skips the page's guardrails then meets none.
 
 ### What the proxy enforces, and what stays in the browser
 
@@ -178,11 +204,11 @@ The policy is a JSON document, versioned, documented in the harness (`docs/guard
 
 Where it lives is the host's question, in its profile: the host's own store, which changes with no deploy (Netlify Blobs, Vercel Edge Config, a Cloudflare KV namespace, a mounted file for Docker), with an environment variable (`AGENT_GUARDRAILS`) as the simple fallback, which usually needs a redeploy to change. Sources are tried in order and the first that has a policy wins.
 
-**If the policy can't be read** (the store is down, the JSON is malformed, a field has the wrong shape), the proxy logs it and enforces the built-in defaults. It never runs with no guardrails.
+**With no policy** in any source, or no sources at all, the proxy enforces the built-in defaults, and logs that once per instance. **If the policy can't be read** (the store is down, the JSON is malformed, a field has the wrong shape), the proxy logs it and enforces the built-in defaults too. It never runs with no guardrails unless the adapter opts out.
 
 ### Step G2 — Wire it into the adapter
 
-[`references/agent-guardrails.ts`](references/agent-guardrails.ts) goes beside `agent-core.ts`. The adapter builds the guardrails **once, at module scope**, so counts outlive a request, and passes them with the client's IP:
+[`references/agent-guardrails.ts`](references/agent-guardrails.ts) goes beside `agent-core.ts`. The adapter builds the guardrails **once, at module scope**, so counts outlive a request, and passes them with the client's IP. Every host profile's adapter does this; with no policy yet, the sources answer none and the defaults apply:
 
 ```ts
 import { proxyGuardrails, envSource } from "./agent-guardrails";
@@ -214,18 +240,19 @@ Offer it when the prompt is worth keeping private, or must not be changed from t
 
 | | |
 |---|---|
-| `GET` the endpoint | The policy copy, without `systemPrompt`; `ETag`, `Cache-Control: no-cache`, `304` on `If-None-Match`. With no policy configured, the endpoint answers GET as before |
+| `GET` the endpoint | The policy copy, without `systemPrompt`; `ETag`, `Cache-Control: no-cache`, `304` on `If-None-Match`. With no policy configured, the defaults' copy, `{ "schema": 1, "version": "defaults" }`, which changes nothing on the page. With the opt-out, the endpoint answers GET as it did before guardrails |
 | Request `Nxis-Conversation` | The id the proxy issued, sent back. Optional |
 | Request `Nxis-Guardrails-Version` | The policy version the page holds. Optional |
 | Response `Nxis-Conversation` | A new id, when the request had none that was good |
-| Response `Nxis-Guardrails-Version` | The current version, when it differs from the one the page sent |
+| Response `Nxis-Guardrails-Version` | The current version, when it differs from the one the page sent: `defaults` with no policy |
+| Response `Nxis-Guardrails` | `off`, on every response, when the adapter opted out |
 | A refusal | `{ "error": "…", "refusal": { "stage", "rule", "action": "block", "severity" } }`, never with the visitor's text, and `Nxis-Guardrail: <rule>`. 413 `input/length`, 429 `input/rate` and `model/budget`, 403 `tool/not-listed`, 422 `tool/policy`, `output/canary` and `output/secret`, 503 `input/lockdown` and `tool/lockdown` |
 
 An endpoint on another origin than the page must list those request headers in `Access-Control-Allow-Headers` and the response ones in `Access-Control-Expose-Headers`.
 
 ### Step G3 — Test it with a script, not a model
 
-[`references/agent-guardrails.test.ts`](references/agent-guardrails.test.ts) plays a client that skips the browser's guardrails, against a scripted model, so it costs nothing: over-length input, over-rate sends (with and without its conversation id), an undeclared tool, a budget overrun, every call during a lockdown, a policy change taking effect on the next request, a broken policy falling back to the defaults, and no change at all with no policy. Run it in the project (vitest).
+[`references/agent-guardrails.test.ts`](references/agent-guardrails.test.ts) plays a client that skips the browser's guardrails, against a scripted model, so it costs nothing: over-length input, over-rate sends (with and without its conversation id), an undeclared tool, a budget overrun, every call during a lockdown, a policy change taking effect on the next request, a broken policy falling back to the defaults, the defaults with no policy (over-length and over-rate refused, ordinary traffic through), and nothing at the proxy with the explicit opt-out, logged and marked. Run it in the project (vitest).
 
 The same file also runs the real page side (`AgentHarness` with `createProxyProvider`) against the endpoint in-process: the proxy's lockdown and canary cut reach a page that knows nothing of them as the page's own message and `nxis-guardrail` event, and a prompt the proxy holds replaces the page's. And a short adversarial set: a deny pattern dodged by case, a lookalike name, a long message disguised as a tool result, a conversation id from another site.
 
@@ -233,7 +260,7 @@ Its type-check needs `dom.iterable` in the project's `lib` (it reads `Headers.ke
 
 Each host profile has a **Guardrails at the proxy** section: where the policy lives so it changes with no deploy, the secret, the client IP, and the adapter. Netlify's is the one to start from. Docker's is verified locally; Vercel and Cloudflare are drafts, with what is unconfirmed marked.
 
-Then, on the host's local runtime: GET the endpoint and check the copy has no `systemPrompt`; send one message over the policy's `input.maxLength` with `curl` and check for `413` and `"rule":"input/length"`.
+Then, on the host's local runtime: GET the endpoint and check the copy has no `systemPrompt`; send one message over the policy's `input.maxLength` (4,000 characters with no policy) with `curl` and check for `413` and `"rule":"input/length"`, and that no response carries `Nxis-Guardrails: off`.
 
 ## Best practices
 
@@ -266,7 +293,7 @@ Then, on the host's local runtime: GET the endpoint and check the copy has no `s
 
 They agree.
 
-**Step 3.** A function directory, `netlify/functions/agent/`, holding the adapter `agent.mts` and `agent-core.ts` beside it, path `/api/agent`. No key is set: the AI Gateway injects it.
+**Step 3.** A function directory, `netlify/functions/agent/`, holding the adapter `agent.mts`, with `agent-core.ts` and `agent-guardrails.ts` beside it, path `/api/agent`. No key is set: the AI Gateway injects it. No policy yet, so the guardrails run the defaults.
 
 **Step 4.** `ALLOWED_ORIGINS` is `https://example.com`, `http://localhost:3000` and `http://localhost:8888`, each on a host the token allows. `rateLimit` with `aggregateBy: ["domain", "ip"]`, 20 a minute.
 
@@ -295,7 +322,7 @@ This skill calls no NxisAI tools. Its work is files in the project and requests 
 | File | Purpose |
 |---|---|
 | `agent-core.ts` | The contract and the in-code defenses. Host-neutral |
-| `agent-guardrails.ts` | Optional: the guardrails policy, enforced on every request. Host-neutral |
+| `agent-guardrails.ts` | The guardrails, enforced on every request: the site's policy, or the built-in defaults. Host-neutral |
 | `agent-guardrails.test.ts` | Its tests, against a scripted model |
 | `policy.example.json` | A policy to start from |
 | The host adapter | Where the host runs server code, how it supplies the credential, and its rate limit — from `references/hosts/<host>.md` |

@@ -7,7 +7,8 @@
 // the proxy read the same document the same way. This file adds what only a server can do: load the policy from
 // where the site keeps it, count per conversation, and refuse before the model is paid for.
 //
-// With no policy configured, `answerTurn` never calls into this file, and the endpoint behaves exactly as before.
+// With no policy configured, the built-in defaults are enforced: the same floors the page's own guardrails use. The
+// only way to run without them is to pass `guardrails: false` to `answerTurn`, which it logs and marks.
 import {
   browserCopy,
   hasSecret,
@@ -29,14 +30,16 @@ import {
  */
 export type PolicySource = () => Promise<string | object | null> | string | object | null;
 
-/** The policy in force for one request. */
+/** The policy in force for one request. There is always one: with none to read, the built-in defaults. */
 export type LoadedPolicy =
-  | { state: "none" }
   | { state: "ok"; policy: GuardrailsPolicy }
-  /** Configured, but unreadable or invalid: the built-in defaults apply, and the proxy still enforces them. */
-  | { state: "defaults"; policy: GuardrailsPolicy };
+  /**
+   * The built-in defaults, enforced: `none` when no source has a policy, `unreadable` when one is configured but
+   * can't be read or is invalid.
+   */
+  | { state: "defaults"; policy: GuardrailsPolicy; reason: "none" | "unreadable" };
 
-/** The policy used when the configured one can't be read: the built-in defaults, nothing looser. */
+/** The policy used when there is none to read, or the configured one can't be: the built-in defaults, nothing looser. */
 export const DEFAULT_POLICY: GuardrailsPolicy = { schema: 1, version: "defaults" };
 
 /** A policy in an environment variable, as JSON. Changing it usually needs a redeploy; prefer the host's store. */
@@ -47,7 +50,7 @@ export const envSource =
 
 /**
  * Load the policy from the first source that has one, at most once per `ttlMs` (0, the default: on every request,
- * so a change applies to the next one).
+ * so a change applies to the next one). With no source that has one, or no sources at all, the built-in defaults.
  */
 export function policyLoader(sources: PolicySource[], opts: { ttlMs?: number; now?: () => number } = {}) {
   const ttl = opts.ttlMs ?? 0;
@@ -55,14 +58,14 @@ export function policyLoader(sources: PolicySource[], opts: { ttlMs?: number; no
   let held: { at: number; value: LoadedPolicy } | null = null;
   return async (): Promise<LoadedPolicy> => {
     if (held && now() - held.at < ttl) return held.value;
-    let value: LoadedPolicy = { state: "none" };
+    let value: LoadedPolicy = { state: "defaults", policy: DEFAULT_POLICY, reason: "none" };
     for (const source of sources) {
       let raw: string | object | null;
       try {
         raw = await source();
       } catch (error) {
         console.error("[agent] guardrails policy source failed; using the built-in defaults:", error);
-        value = { state: "defaults", policy: DEFAULT_POLICY };
+        value = { state: "defaults", policy: DEFAULT_POLICY, reason: "unreadable" };
         break;
       }
       if (raw == null || raw === "") continue;
@@ -71,7 +74,7 @@ export function policyLoader(sources: PolicySource[], opts: { ttlMs?: number; no
       } catch (error) {
         // The message names the field, never its value.
         console.error("[agent] guardrails policy refused; using the built-in defaults:", (error as Error).message);
-        value = { state: "defaults", policy: DEFAULT_POLICY };
+        value = { state: "defaults", policy: DEFAULT_POLICY, reason: "unreadable" };
       }
       break;
     }
@@ -341,7 +344,7 @@ export const startsTurn = (messages: { role: string; content: string }[]) => {
 
 /** Options for {@link proxyGuardrails}. */
 export interface ProxyGuardrailsOptions {
-  /** Where the policy comes from, in order. */
+  /** Where the policy comes from, in order. None, or none that has one: the built-in defaults are enforced. */
   sources: PolicySource[];
   /** How long a loaded policy is kept, in ms. 0 (the default): read on every request. */
   ttlMs?: number;
@@ -388,7 +391,16 @@ export type ProxyClassifier = (ctx: { stage: "input" | "output"; text: string })
 /** The guardrails for one endpoint. Build it once, at module scope, so its counts outlive a request. */
 export function proxyGuardrails(opts: ProxyGuardrailsOptions) {
   const now = opts.now ?? Date.now;
-  const load = policyLoader(opts.sources, { ttlMs: opts.ttlMs, now });
+  const loader = policyLoader(opts.sources, { ttlMs: opts.ttlMs, now });
+  let saidDefaults = false;
+  const load = async (): Promise<LoadedPolicy> => {
+    const loaded = await loader();
+    if (loaded.state === "defaults" && loaded.reason === "none" && !saidDefaults) {
+      saidDefaults = true;
+      console.info("[agent] no guardrails policy configured: enforcing the built-in defaults.");
+    }
+    return loaded;
+  };
   const store = opts.store ?? memoryStore(now);
   const ids = opts.secret ? new ConversationIds(opts.secret, undefined, now) : null;
   if (!ids) console.warn("[agent] no conversation secret: limits are counted by IP and origin only.");
@@ -405,16 +417,15 @@ export function proxyGuardrails(opts: ProxyGuardrailsOptions) {
      * Check one turn's request against the policy, before the model is asked.
      *
      * @param client - Who is asking, as the host knows it (its client IP). With the origin, the outer key.
-     * @returns The refusal to send, or what the generation may do. Null when no policy is configured: the caller
-     * then behaves exactly as it did before guardrails.
+     * @returns The refusal to send, or what the generation may do. With no policy configured, under the built-in
+     * defaults.
      */
     async admit(
       req: Request,
       body: { messages: { role: string; content: string }[]; tools: { name: string }[]; maxTokens: number },
       client: string,
-    ): Promise<{ refused: Response } | Admitted | null> {
+    ): Promise<{ refused: Response } | Admitted> {
       const loaded = await load();
-      if (loaded.state === "none") return null;
       const policy = loaded.policy;
       const limits = limitsFor(policy);
       const origin = req.headers.get("origin") ?? "";
@@ -492,13 +503,11 @@ export function proxyGuardrails(opts: ProxyGuardrailsOptions) {
     },
 
     /**
-     * The policy endpoint: the copy the page reads (`guardrails-src`), without the system prompt, with an ETag.
-     * Null when no policy is configured: the caller answers as it did before guardrails, and a page asking finds
-     * none and keeps its own configuration.
+     * The policy endpoint: the copy the page reads (`guardrails-src`), without the system prompt, with an ETag. With
+     * no policy configured, the built-in defaults' copy (version `defaults`), which changes nothing on the page.
      */
-    async serve(req: Request): Promise<Response | null> {
+    async serve(req: Request): Promise<Response> {
       const loaded = await load();
-      if (loaded.state === "none") return null;
       const json = JSON.stringify(browserCopy(loaded.policy));
       const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(json)));
       const etag = `"${[...digest.slice(0, 12)].map((b) => b.toString(16).padStart(2, "0")).join("")}"`;

@@ -26,7 +26,7 @@ export type TypedRefusal = { stage: string; rule: string; action: "block"; sever
 
 /**
  * The guardrails, as agent-guardrails.ts builds them (`proxyGuardrails`). Typed here by shape, so this file stands
- * alone on a site that doesn't use them.
+ * alone on a site that has opted out of them (`guardrails: false`).
  */
 export interface Guardrails {
   serve(req: Request): Promise<Response | null>;
@@ -45,21 +45,43 @@ export interface Guardrails {
         systemPrompt?: string;
         screen(): { push(delta: string): TypedRefusal | null; pushArgs(delta: string): TypedRefusal | null; estimate(): number };
       }
-    | null
   >;
 }
+
+/**
+ * What the adapter passes. The guardrails are not optional: either the guardrails, with the client's IP as the host
+ * knows it, or `guardrails: false`, the explicit opt-out.
+ */
+export type TurnOptions = { anthropic: ModelClient; allowedOrigins: readonly string[] } & (
+  | { guardrails: Guardrails; client: string }
+  /**
+   * No guardrails at the proxy: only `LIMITS`, the Origin check and the host's own rate limit stand in front of the
+   * model. Logged once per instance, and every response carries `Nxis-Guardrails: off`.
+   */
+  | { guardrails: false; client?: string }
+);
+
+let warnedOff = false;
 
 const refuse = (status: number, error: string, headers?: Record<string, string>) => Response.json({ error }, { status, headers });
 
 /**
  * Answer one harness turn. The host adapter supplies the client, the allowed
- * origins, and its own rate limit; and, optionally, the guardrails (see
- * agent-guardrails.ts) with the client's IP as the host knows it.
+ * origins, and its own rate limit; and the guardrails (see agent-guardrails.ts)
+ * with the client's IP as the host knows it, or `guardrails: false` to opt out.
  */
-export async function answerTurn(
-  req: Request,
-  opts: { anthropic: ModelClient; allowedOrigins: readonly string[]; guardrails?: Guardrails; client?: string },
-): Promise<Response> {
+export async function answerTurn(req: Request, opts: TurnOptions): Promise<Response> {
+  if (opts.guardrails) return answer(req, opts);
+  if (!warnedOff) {
+    warnedOff = true;
+    console.warn("[agent] guardrails are off (guardrails: false): only the endpoint's caps, the Origin check and the host's rate limit apply.");
+  }
+  const res = await answer(req, opts);
+  res.headers.set("Nxis-Guardrails", "off");
+  return res;
+}
+
+async function answer(req: Request, opts: TurnOptions): Promise<Response> {
   // The policy endpoint: the copy the page reads, without the system prompt. Not secret, so no Origin check.
   if (req.method === "GET" && opts.guardrails) {
     const copy = await opts.guardrails.serve(req);
@@ -90,11 +112,10 @@ export async function answerTurn(
     return refuse(413, "Message too long.");
   }
 
-  // The guardrails, when a policy is configured: refused here, before the model is paid for. Null when none is,
-  // and everything below runs as it did before guardrails.
+  // The guardrails: refused here, before the model is paid for. Null only with the explicit opt-out.
   const asked = Math.min(body.maxTokens ?? LIMITS.maxTokens, LIMITS.maxTokens);
   const gate = opts.guardrails
-    ? await opts.guardrails.admit(req, { messages, tools: body.tools ?? [], maxTokens: asked }, opts.client ?? "unknown")
+    ? await opts.guardrails.admit(req, { messages, tools: body.tools ?? [], maxTokens: asked }, opts.client || "unknown")
     : null;
   if (gate && "refused" in gate) return gate.refused;
   const headers = gate?.headers ?? {};
