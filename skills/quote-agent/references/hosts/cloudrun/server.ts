@@ -94,7 +94,8 @@ const API_KEY = secret('ANTHROPIC_API_KEY');
 const scriptedModel: QuoteModel = {
   async decide({ messages }) {
     try {
-      const values = JSON.parse(messages[messages.length - 1]?.content ?? '');
+      const last = (messages[messages.length - 1]?.content ?? '').replace(/^<visitor_message>\n?|\n?<\/visitor_message>$/g, '');
+      const values = JSON.parse(last);
       if (values && typeof values === 'object' && !Array.isArray(values)) return { action: 'ready', values };
     } catch {
       // Not JSON: ask.
